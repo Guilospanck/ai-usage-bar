@@ -56,13 +56,35 @@ the pinned window (OpenAI has no "Fable" cap), it falls back to that provider's 
 
 - **macOS 13 or later**
 - A **Swift toolchain** — Xcode 15+ or the standalone toolchain (`swift --version`).
-  If missing: `xcode-select --install`.
+  If missing: `xcode-select --install`. *(Only needed to build from source — the
+  Homebrew cask ships a prebuilt binary.)*
 - Signed in at least once with the CLIs so the OAuth tokens exist:
   - `claude` — authenticate (Claude Pro/Max)
   - `codex` — authenticate (ChatGPT Plus/Pro/Business)
 - Optional: [`just`](https://github.com/casey/just) for the task recipes — `brew install just`
 
 ## Install
+
+### Homebrew (recommended)
+
+```bash
+brew install --cask guilospanck/tap/ai-usage-bar
+open "/Applications/AI Usage Bar.app"
+```
+
+This taps [`Guilospanck/homebrew-tap`](https://github.com/Guilospanck/homebrew-tap)
+and installs the prebuilt `.app` into `/Applications` — **no Swift toolchain
+required**. The cask clears the download quarantine on install so Gatekeeper
+lets it launch (the app is ad-hoc signed, not notarized).
+
+Upgrade or remove it the usual `brew` way:
+
+```bash
+brew upgrade --cask ai-usage-bar
+brew uninstall --cask ai-usage-bar        # turn off Launch at Login first
+```
+
+### Build from source
 
 From the repository root (the folder containing `Package.swift`):
 
