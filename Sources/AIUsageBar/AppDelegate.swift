@@ -40,8 +40,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if snapshots.isEmpty {
             menu.addItem(disabledItem("Loading…"))
         } else {
+            // Pad labels to a width shared across every provider so the bars and
+            // percentages line up in one column throughout the whole menu.
+            let labelWidth = snapshots
+                .flatMap { rows(for: $0) }
+                .map { $0.label.count }
+                .max() ?? 0
             for snap in snapshots {
-                addProviderSection(snap, to: menu)
+                addProviderSection(snap, labelWidth: labelWidth, to: menu)
                 menu.addItem(.separator())
             }
         }
@@ -68,7 +74,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         return menu
     }
 
-    private func addProviderSection(_ snap: ProviderUsage, to menu: NSMenu) {
+    /// This provider's windows paired with the metric that selects them.
+    private func rows(for snap: ProviderUsage) -> [(label: String, window: UsageWindow, metric: TitleMetric)] {
+        var rows: [(label: String, window: UsageWindow, metric: TitleMetric)] = []
+        if let w = snap.fiveHour { rows.append(("5-hour", w, .fiveHour)) }
+        if let w = snap.weekly { rows.append(("Weekly", w, .weekly)) }
+        for named in snap.scoped {
+            rows.append((named.label, named.window, .scoped(named.label)))
+        }
+        return rows
+    }
+
+    private func addProviderSection(_ snap: ProviderUsage, labelWidth: Int, to menu: NSMenu) {
         var header = snap.provider.rawValue
         if let plan = snap.planName, !plan.isEmpty {
             header += "  (\(plan))"
@@ -79,23 +96,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             menu.addItem(disabledItem("  ⚠ \(err)"))
         }
 
-        // Collect this provider's windows paired with the metric that selects them.
-        var rows: [(label: String, window: UsageWindow, metric: TitleMetric)] = []
-        if let w = snap.fiveHour { rows.append(("5-hour", w, .fiveHour)) }
-        if let w = snap.weekly { rows.append(("Weekly", w, .weekly)) }
-        for named in snap.scoped {
-            rows.append((named.label, named.window, .scoped(named.label)))
-        }
-
-        if rows.isEmpty {
+        let sectionRows = rows(for: snap)
+        if sectionRows.isEmpty {
             if snap.error == nil { menu.addItem(disabledItem("  No data")) }
             return
         }
 
-        // Pad labels to a common width so the bars and percentages line up.
-        let labelWidth = rows.map { $0.label.count }.max() ?? 0
         let current = Settings.titleMetric
-        for row in rows {
+        for row in sectionRows {
             addWindowItem(row, labelWidth: labelWidth, selected: row.metric == current, to: menu)
         }
     }
