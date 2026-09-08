@@ -92,6 +92,11 @@ jobs:
           end
           RUBY
 
+          # Gate: refuse to publish a cask that Homebrew would complain about.
+          # Catches deprecated DSL usage (e.g. the old `depends_on macos:`
+          # string form) and style issues before they ever reach the tap.
+          brew style tap/Casks/ai-usage-bar.rb
+
           cd tap
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
