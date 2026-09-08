@@ -5,28 +5,22 @@ A native macOS menu-bar app that shows your **current subscription usage** for
 rolling-window percentages you'd see in Claude Code's `/usage` and Codex CLI's
 `/status`, always visible in the menu bar.
 
-```
-  C 30% · O 71%          ← menu-bar title
+A compact title sits in the menu bar —
 
-  Claude  (max)
-    Click a row to show it in the menu bar
-  ✓ 5-hour           ▰▰▰▰▱▱▱▱▱▱   42%
-        resets in 3h 12m
-    Weekly           ▰▰▱▱▱▱▱▱▱▱   15%
-        resets in 4d 6h
-    Weekly · Fable   ▰▰▰▱▱▱▱▱▱▱   30%   ← orange = active/binding limit
-        resets in 4d 6h
-  ──────────────────────
-  OpenAI  (plus)
-    5-hour           ▰▰▰▰▰▰▰▱▱▱   71%
-        resets in 1h 40m
-    Weekly           ▰▰▰▰▱▱▱▱▱▱   38%
-        resets in 2d 9h
-  ──────────────────────
-  Refresh Now            ⌘R
-  ✓ Launch at Login
-  Quit AI Usage Bar      ⌘Q
-```
+<div align="center" style="text-align:center">
+  <img src="docs/menubar.png" alt="Menu-bar title reading: C 20% · O 2%" height="22">
+</div>
+
+— and clicking it drops down the full per-window breakdown for both providers:
+
+<div align="center" style="text-align:center">
+  <img src="docs/dropdown.png" alt="Dropdown showing Claude (max) 5-hour, Weekly and Weekly · Fable windows, and OpenAI (business) monthly Spend, each with a bar, percentage and reset countdown" width="360">
+</div>
+
+<sub>`✓` marks the window pinned to the menu-bar title · <b>orange</b> marks the
+window currently binding your usage (the API's <code>is_active</code> flag) ·
+OpenAI here is a <b>business</b> plan, so it shows a monthly <b>Spend</b> cap
+(<code>$74 of $3500</code>) instead of Plus/Pro's rolling 5-hour + Weekly windows.</sub>
 
 Each usage row is clickable: click one to pin it as the menu-bar percentage
 (a `✓` marks the pinned row); click it again to revert to auto (highest window).
