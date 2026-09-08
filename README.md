@@ -8,7 +8,7 @@ rolling-window percentages you'd see in Claude Code's `/usage` and Codex CLI's
 A compact title sits in the menu bar —
 
 <div align="center" style="text-align:center">
-  <img src="docs/menubar.png" alt="Menu-bar title reading: C 20% · O 2%" height="22">
+  <img src="docs/menubar.png" alt="Menu-bar title showing the Claude logo with 21% and the OpenAI logo with 2%" height="22">
 </div>
 
 — and clicking it drops down the full per-window breakdown for both providers:
