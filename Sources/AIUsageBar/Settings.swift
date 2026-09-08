@@ -35,10 +35,17 @@ enum TitleMetric: Equatable {
 }
 
 enum Settings {
-    private static let titleMetricKey = "titleMetric"
+    /// Each provider remembers its own menu-bar metric independently, so pinning
+    /// a Claude window doesn't disturb OpenAI's selection and vice versa.
+    static func titleMetric(for provider: ProviderKind) -> TitleMetric {
+        TitleMetric(storage: UserDefaults.standard.string(forKey: key(provider)) ?? "worst")
+    }
 
-    static var titleMetric: TitleMetric {
-        get { TitleMetric(storage: UserDefaults.standard.string(forKey: titleMetricKey) ?? "worst") }
-        set { UserDefaults.standard.set(newValue.storageKey, forKey: titleMetricKey) }
+    static func setTitleMetric(_ metric: TitleMetric, for provider: ProviderKind) {
+        UserDefaults.standard.set(metric.storageKey, forKey: key(provider))
+    }
+
+    private static func key(_ provider: ProviderKind) -> String {
+        "titleMetric.\(provider.rawValue)"
     }
 }

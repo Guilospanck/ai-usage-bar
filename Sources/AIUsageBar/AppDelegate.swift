@@ -1,5 +1,12 @@
 import AppKit
 
+/// Carried on each clickable usage row so its action knows both which provider
+/// and which window it belongs to — the menu-bar metric is chosen per provider.
+private struct RowSelection {
+    let provider: ProviderKind
+    let metric: TitleMetric
+}
+
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
 
@@ -40,7 +47,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// The menu-bar title with each provider's logo drawn inline before its
     /// percentage, e.g. "[✳] 26% · [✺] 2%".
     private func menuBarTitle(_ snapshots: [ProviderUsage]) -> NSAttributedString {
-        let pieces = Format.menuBarPieces(snapshots, metric: Settings.titleMetric)
+        let pieces = Format.menuBarPieces(snapshots)
         let font = NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .regular)
         let textAttrs: [NSAttributedString.Key: Any] = [
             .font: font, .foregroundColor: NSColor.labelColor,
@@ -131,24 +138,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
-        let current = Settings.titleMetric
+        let current = Settings.titleMetric(for: snap.provider)
         for row in sectionRows {
-            addWindowItem(row, labelWidth: labelWidth, selected: row.metric == current, to: menu)
+            addWindowItem(row, provider: snap.provider, labelWidth: labelWidth,
+                          selected: row.metric == current, to: menu)
         }
     }
 
     private func addWindowItem(_ row: (label: String, window: UsageWindow, metric: TitleMetric),
-                               labelWidth: Int, selected: Bool, to menu: NSMenu) {
+                               provider: ProviderKind, labelWidth: Int, selected: Bool, to menu: NSMenu) {
         let window = row.window
         let paddedLabel = row.label.padding(toLength: labelWidth, withPad: " ", startingAt: 0)
         let pct = String(format: "%3d%%", Int(window.usedPercent.rounded()))
         let line = "\(paddedLabel)   \(Format.bar(window.usedPercent))   \(pct)"
 
-        // Clickable: selects this window as the menu-bar metric (click again to
-        // return to auto/highest). The active/binding window is drawn in orange.
+        // Clickable: selects this window as this provider's menu-bar metric (click
+        // again to return to auto/highest). The active/binding window is orange.
         let item = NSMenuItem(title: line, action: #selector(selectRow(_:)), keyEquivalent: "")
         item.target = self
-        item.representedObject = row.metric.storageKey
+        item.representedObject = RowSelection(provider: provider, metric: row.metric)
         item.state = selected ? .on : .off
         item.isEnabled = true
         var attrs: [NSAttributedString.Key: Any] = [
@@ -195,12 +203,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - Actions
 
-    /// Clicking a usage row pins it as the menu-bar metric; clicking the pinned
-    /// row again reverts to auto (highest window).
+    /// Clicking a usage row pins it as that provider's menu-bar metric; clicking
+    /// the pinned row again reverts that provider to auto (highest window).
+    /// Selections are independent per provider.
     @objc private func selectRow(_ sender: NSMenuItem) {
-        guard let key = sender.representedObject as? String else { return }
-        let picked = TitleMetric(storage: key)
-        Settings.titleMetric = (Settings.titleMetric == picked) ? .worst : picked
+        guard let selection = sender.representedObject as? RowSelection else { return }
+        let current = Settings.titleMetric(for: selection.provider)
+        let next: TitleMetric = (current == selection.metric) ? .worst : selection.metric
+        Settings.setTitleMetric(next, for: selection.provider)
         render()
     }
 
