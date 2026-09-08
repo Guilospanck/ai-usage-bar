@@ -27,10 +27,39 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func render() {
         let snapshots = store.ordered
-        statusItem.button?.title = store.isRefreshing && snapshots.isEmpty
-            ? "AI …"
-            : Format.menuBarTitle(snapshots, metric: Settings.titleMetric)
+        if let button = statusItem.button {
+            button.image = nil
+            button.attributedTitle = (store.isRefreshing && snapshots.isEmpty)
+                ? NSAttributedString(string: "AI …",
+                                     attributes: [.font: NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .regular)])
+                : menuBarTitle(snapshots)
+        }
         statusItem.menu = buildMenu(snapshots)
+    }
+
+    /// The menu-bar title with each provider's logo drawn inline before its
+    /// percentage, e.g. "[✳] 26% · [✺] 2%".
+    private func menuBarTitle(_ snapshots: [ProviderUsage]) -> NSAttributedString {
+        let pieces = Format.menuBarPieces(snapshots, metric: Settings.titleMetric)
+        let font = NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .regular)
+        let textAttrs: [NSAttributedString.Key: Any] = [
+            .font: font, .foregroundColor: NSColor.labelColor,
+        ]
+        let result = NSMutableAttributedString()
+        for (index, piece) in pieces.enumerated() {
+            if index > 0 {
+                result.append(NSAttributedString(string: "  ·  ", attributes: textAttrs))
+            }
+            let icon = piece.provider.iconImage(pointSize: font.pointSize)
+            let attachment = NSTextAttachment()
+            attachment.image = icon
+            // Center the glyph vertically against the digits' cap height.
+            attachment.bounds = CGRect(x: 0, y: (font.capHeight - icon.size.height) / 2,
+                                       width: icon.size.width, height: icon.size.height)
+            result.append(NSAttributedString(attachment: attachment))
+            result.append(NSAttributedString(string: " \(piece.text)", attributes: textAttrs))
+        }
+        return result
     }
 
     private func buildMenu(_ snapshots: [ProviderUsage]) -> NSMenu {

@@ -42,16 +42,24 @@ enum Format {
         }
     }
 
-    /// The compact menu-bar title, e.g. "C 42% · O 71%", using the chosen metric.
-    /// Falls back to a provider's highest window when it lacks the selected one
-    /// (e.g. OpenAI has no "Fable" cap), so every provider still shows a number.
+    /// One provider paired with its menu-bar percentage text (e.g. "42%" or "—"),
+    /// resolved for the chosen metric. Falls back to a provider's highest window
+    /// when it lacks the selected one (e.g. OpenAI has no "Fable" cap), so every
+    /// provider still shows a number. Shared by the plain and icon titles.
+    static func menuBarPieces(_ snapshots: [ProviderUsage],
+                              metric: TitleMetric) -> [(provider: ProviderKind, text: String)] {
+        snapshots.map { snap in
+            let w = window(for: metric, in: snap) ?? window(for: .worst, in: snap)
+            return (snap.provider, w.map { percent($0.usedPercent) } ?? "—")
+        }
+    }
+
+    /// The compact menu-bar title as plain text, e.g. "C 42% · O 71%". Used as a
+    /// fallback (loading state, `--probe`); the live menu bar renders icons.
     static func menuBarTitle(_ snapshots: [ProviderUsage], metric: TitleMetric) -> String {
         guard !snapshots.isEmpty else { return "AI …" }
-        let pieces = snapshots.map { snap -> String in
-            let w = window(for: metric, in: snap) ?? window(for: .worst, in: snap)
-            guard let w else { return "\(snap.provider.shortSymbol) —" }
-            return "\(snap.provider.shortSymbol) \(percent(w.usedPercent))"
-        }
-        return pieces.joined(separator: " · ")
+        return menuBarPieces(snapshots, metric: metric)
+            .map { "\($0.provider.shortSymbol) \($0.text)" }
+            .joined(separator: " · ")
     }
 }
