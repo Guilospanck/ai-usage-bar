@@ -72,6 +72,14 @@ tag version:
     if git rev-parse "v$ver" >/dev/null 2>&1; then
         echo "✗ tag v$ver already exists." >&2; exit 1
     fi
+    # Pre-flight: lint the exact cask CI will publish for this version, so
+    # style/deprecation issues are caught here — before anything is tagged or
+    # pushed — instead of surfacing only after users run `brew install`.
+    command -v brew >/dev/null || { echo "✗ install Homebrew to lint the cask: https://brew.sh" >&2; exit 1; }
+    cask="$(mktemp -d)/ai-usage-bar.rb"
+    # sha256 is unknown until CI builds the zip; a placeholder is fine for style.
+    ./scripts/render-cask.sh "$ver" "$(printf '%064d' 0)" > "$cask"
+    brew style "$cask"
     /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $ver" Info.plist
     /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $ver" Info.plist
     git add Info.plist
