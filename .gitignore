@@ -1,0 +1,24 @@
+# Swift Package Manager
+.build/
+.swiftpm/
+Package.resolved
+
+# App bundle output from build.sh
+build/
+
+# Xcode (if ever opened there)
+DerivedData/
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+*.xcuserstate
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+
+# Editor / misc
+*.swp
+*~
+.vscode/
