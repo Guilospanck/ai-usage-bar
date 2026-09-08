@@ -57,6 +57,21 @@ _ensure-app:
 
 # --- Release -------------------------------------------------------------
 
+# Lint the Homebrew cask CI will publish (style + deprecation checks).
+lint:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    command -v brew >/dev/null || { echo "✗ install Homebrew to lint the cask: https://brew.sh" >&2; exit 1; }
+    # Render under a Casks/ dir so `brew style` recognizes it as a cask and
+    # applies the cask cops (a loose .rb elsewhere gets the generic Ruby
+    # ruleset instead — Sorbet sigils, frozen-string comment, etc.).
+    # Version/sha are placeholders; neither affects style.
+    caskdir="$(mktemp -d)/Casks"
+    mkdir -p "$caskdir"
+    ./scripts/render-cask.sh 0.0.0 "$(printf '%064d' 0)" > "$caskdir/ai-usage-bar.rb"
+    brew style "$caskdir/ai-usage-bar.rb"
+    echo "✓ cask lint clean"
+
 # Bump the version, commit, tag, and push — triggers the Release workflow.
 # Usage: just tag 1.1
 tag version:
@@ -72,18 +87,9 @@ tag version:
     if git rev-parse "v$ver" >/dev/null 2>&1; then
         echo "✗ tag v$ver already exists." >&2; exit 1
     fi
-    # Pre-flight: lint the exact cask CI will publish for this version, so
-    # style/deprecation issues are caught here — before anything is tagged or
-    # pushed — instead of surfacing only after users run `brew install`.
-    command -v brew >/dev/null || { echo "✗ install Homebrew to lint the cask: https://brew.sh" >&2; exit 1; }
-    # Render under a Casks/ dir so `brew style` recognizes it as a cask and
-    # applies the cask cops (a loose .rb elsewhere gets the generic Ruby
-    # ruleset instead — Sorbet sigils, frozen-string comment, etc.).
-    caskdir="$(mktemp -d)/Casks"
-    mkdir -p "$caskdir"
-    # sha256 is unknown until CI builds the zip; a placeholder is fine for style.
-    ./scripts/render-cask.sh "$ver" "$(printf '%064d' 0)" > "$caskdir/ai-usage-bar.rb"
-    brew style "$caskdir/ai-usage-bar.rb"
+    # Pre-flight: lint the cask CI will publish, so style/deprecation issues
+    # are caught here — before anything is tagged or pushed.
+    just lint
     /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $ver" Info.plist
     /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $ver" Info.plist
     git add Info.plist
