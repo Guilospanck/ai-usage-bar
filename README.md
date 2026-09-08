@@ -29,39 +29,6 @@ auto-selected one when unpinned — and each provider's selection is independent
 The window currently binding your usage (the API's `is_active` flag) is drawn in
 **orange**.
 
-## How it works
-
-No API keys required — it reuses the OAuth tokens the official CLIs already store,
-and calls the same undocumented usage endpoints they use:
-
-| Provider | Endpoint | Token source |
-|----------|----------|--------------|
-| Claude   | `GET api.anthropic.com/api/oauth/usage` | Keychain `Claude Code-credentials`, fallback `~/.claude/.credentials.json` |
-| OpenAI   | `GET chatgpt.com/backend-api/wham/usage` | `~/.codex/auth.json` |
-
-It re-reads the tokens on every poll, so it rides on the CLIs keeping them fresh.
-Poll interval defaults to **120s**; last-good values are kept on network/429 errors.
-
-For **Claude**, usage is read from the endpoint's structured `limits[]` array, which
-exposes the 5-hour session window, the all-model weekly cap, **and per-model weekly
-caps** (e.g. **Fable**) via each entry's `scope.model.display_name`. Any additional
-model-scoped caps your plan has appear automatically — nothing is hard-coded to Fable.
-
-**Choosing what the menu-bar shows:** the compact percentage defaults to the *highest*
-window across everything. Click any usage row in the dropdown to pin that window instead;
-click the pinned row again to go back to auto. The choice is saved. When a provider lacks
-the pinned window (OpenAI has no "Fable" cap), it falls back to that provider's highest.
-
-## Requirements
-
-- **macOS 13 or later**
-- A **Swift toolchain** — Xcode 15+ or the standalone toolchain (`swift --version`).
-  If missing: `xcode-select --install`. *(Only needed to build from source — the
-  Homebrew cask ships a prebuilt binary.)*
-- Signed in at least once with the CLIs so the OAuth tokens exist:
-  - `claude` — authenticate (Claude Pro/Max)
-  - `codex` — authenticate (ChatGPT Plus/Pro/Business)
-- Optional: [`just`](https://github.com/casey/just) for the task recipes — `brew install just`
 
 ## Install
 
@@ -85,6 +52,17 @@ brew uninstall --cask ai-usage-bar        # turn off Launch at Login first
 ```
 
 ### Build from source
+
+Requirements
+
+- **macOS 13 or later**
+- A **Swift toolchain** — Xcode 15+ or the standalone toolchain (`swift --version`).
+  If missing: `xcode-select --install`. *(Only needed to build from source — the
+  Homebrew cask ships a prebuilt binary.)*
+- Signed in at least once with the CLIs so the OAuth tokens exist:
+  - `claude` — authenticate (Claude Pro/Max)
+  - `codex` — authenticate (ChatGPT Plus/Pro/Business)
+- Optional: [`just`](https://github.com/casey/just) for the task recipes — `brew install just`
 
 From the repository root (the folder containing `Package.swift`):
 
@@ -138,6 +116,29 @@ just dump             # raw HTTP status + response body, for debugging shapes
 
 `probe` prints each provider's plan, windows, and reset countdowns — the fastest
 way to confirm the token/endpoint plumbing works before worrying about the UI.
+
+## How it works
+
+No API keys required — it reuses the OAuth tokens the official CLIs already store,
+and calls the same undocumented usage endpoints they use:
+
+| Provider | Endpoint | Token source |
+|----------|----------|--------------|
+| Claude   | `GET api.anthropic.com/api/oauth/usage` | Keychain `Claude Code-credentials`, fallback `~/.claude/.credentials.json` |
+| OpenAI   | `GET chatgpt.com/backend-api/wham/usage` | `~/.codex/auth.json` |
+
+It re-reads the tokens on every poll, so it rides on the CLIs keeping them fresh.
+Poll interval defaults to **120s**; last-good values are kept on network/429 errors.
+
+For **Claude**, usage is read from the endpoint's structured `limits[]` array, which
+exposes the 5-hour session window, the all-model weekly cap, **and per-model weekly
+caps** (e.g. **Fable**) via each entry's `scope.model.display_name`. Any additional
+model-scoped caps your plan has appear automatically — nothing is hard-coded to Fable.
+
+**Choosing what the menu-bar shows:** the compact percentage defaults to the *highest*
+window across everything. Click any usage row in the dropdown to pin that window instead;
+click the pinned row again to go back to auto. The choice is saved. When a provider lacks
+the pinned window (OpenAI has no "Fable" cap), it falls back to that provider's highest.
 
 ## Troubleshooting
 
