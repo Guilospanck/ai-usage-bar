@@ -1,8 +1,7 @@
 import AppKit
 
 /// Menu-bar glyphs for each provider, rendered from the official brand marks as
-/// *template* images so AppKit tints them to match the menu bar (black in light
-/// mode, white in dark) without shipping any binary asset files.
+/// white (non-template) images without shipping any binary asset files.
 ///
 /// The logos are stored as their vector outlines on a 24×24 grid (the source
 /// SVG `viewBox`), pre-normalized to absolute `M`/`L`/`C`/`Z` commands — arcs
@@ -27,11 +26,11 @@ extension ProviderKind {
             path.transform(using: AffineTransform(m11: scale, m12: 0, m21: 0, m22: -scale,
                                                   tX: 0, tY: side))
             path.windingRule = .nonZero // reproduces the logos' interior holes
-            NSColor.black.setFill()
+            NSColor.white.setFill()
             path.fill()
             return true
         }
-        image.isTemplate = true // tinted to the menu-bar appearance at draw time
+        image.isTemplate = false // draw the logos white, not tinted to the menu bar
         providerIconCache[key] = image
         return image
     }
