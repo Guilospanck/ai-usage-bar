@@ -75,7 +75,7 @@ jobs:
             desc "Menu-bar app showing Claude/Codex usage"
             homepage "https://github.com/Guilospanck/ai-usage-bar"
 
-            depends_on macos: ">= :ventura"
+            depends_on macos: :ventura
 
             app "AI Usage Bar.app"
 
