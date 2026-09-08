@@ -17,13 +17,15 @@ A compact title sits in the menu bar —
   <img src="docs/dropdown.png" alt="Dropdown showing Claude (max) 5-hour, Weekly and Weekly · Fable windows, and OpenAI (business) monthly Spend, each with a bar, percentage and reset countdown" width="360">
 </div>
 
-<sub>`✓` marks the window pinned to the menu-bar title · <b>orange</b> marks the
+<sub>`✓` marks the window shown in the menu-bar title (per provider) · <b>orange</b> marks the
 window currently binding your usage (the API's <code>is_active</code> flag) ·
 OpenAI here is a <b>business</b> plan, so it shows a monthly <b>Spend</b> cap
 (<code>$74 of $3500</code>) instead of Plus/Pro's rolling 5-hour + Weekly windows.</sub>
 
-Each usage row is clickable: click one to pin it as the menu-bar percentage
-(a `✓` marks the pinned row); click it again to revert to auto (highest window).
+Each usage row is clickable: click one to pin it as that provider's menu-bar
+percentage; click it again to revert to auto (highest window). A `✓` always
+marks the window currently shown in the menu bar — the pinned row, or the
+auto-selected one when unpinned — and each provider's selection is independent.
 The window currently binding your usage (the API's `is_active` flag) is drawn in
 **orange**.
 

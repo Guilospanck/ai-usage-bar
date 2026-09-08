@@ -138,10 +138,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
-        let current = Settings.titleMetric(for: snap.provider)
+        // Tick the row actually shown in the menu bar. When the provider is on
+        // auto (.worst) or active — including on first launch — resolve that to
+        // the concrete row it displays, so the current window is always marked.
+        let chosen = Settings.titleMetric(for: snap.provider)
+        let displayed: TitleMetric?
+        if sectionRows.contains(where: { $0.metric == chosen }) {
+            displayed = chosen
+        } else if chosen == .active, let active = sectionRows.first(where: { $0.window.isActive }) {
+            displayed = active.metric
+        } else {
+            displayed = sectionRows.max(by: { $0.window.usedPercent < $1.window.usedPercent })?.metric
+        }
+
         for row in sectionRows {
             addWindowItem(row, provider: snap.provider, labelWidth: labelWidth,
-                          selected: row.metric == current, to: menu)
+                          selected: row.metric == displayed, to: menu)
         }
     }
 
