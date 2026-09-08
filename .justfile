@@ -55,6 +55,64 @@ uninstall:
 _ensure-app:
     @test -d "{{bundle}}" || just app
 
+# --- Release -------------------------------------------------------------
+
+# Bump the version, commit, tag, and push — triggers the Release workflow.
+# Usage: just tag 1.1
+tag version:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    ver="{{version}}"
+    if ! [[ "$ver" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?$ ]]; then
+        echo "✗ version must look like 1.1 or 1.1.0 (got '$ver')" >&2; exit 1
+    fi
+    if [[ -n "$(git status --porcelain)" ]]; then
+        echo "✗ working tree not clean — commit or stash first." >&2; exit 1
+    fi
+    if git rev-parse "v$ver" >/dev/null 2>&1; then
+        echo "✗ tag v$ver already exists." >&2; exit 1
+    fi
+    /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $ver" Info.plist
+    /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $ver" Info.plist
+    git add Info.plist
+    git commit -m "Release v$ver"
+    git tag "v$ver"
+    git push origin HEAD
+    git push origin "v$ver"
+    echo "✓ Pushed v$ver — CI will build, release, and update the tap."
+
+# One-time: create a write-scoped deploy key for the tap and store its private
+# half as a secret in this repo, so CI can push the cask. Needs gh (authed).
+# Usage: just setup-tap-key
+setup-tap-key:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    command -v gh >/dev/null || { echo "✗ install gh first: brew install gh" >&2; exit 1; }
+    umask 077
+    tmp="$(mktemp -d)"
+    trap 'rm -rf -- "$tmp"' EXIT
+    ssh-keygen -t ed25519 -N "" -C "ai-usage-bar release CI" -f "$tmp/key" >/dev/null
+    gh repo deploy-key add "$tmp/key.pub" \
+        -R Guilospanck/homebrew-tap \
+        --title "ai-usage-bar release CI" \
+        --allow-write
+    if ! gh secret set HOMEBREW_TAP_DEPLOY_KEY \
+        -R Guilospanck/ai-usage-bar < "$tmp/key"; then
+        echo "✗ Failed to store the private key; removing the deploy key from homebrew-tap." >&2
+        public_key="$(awk '{print $1 " " $2}' "$tmp/key.pub")"
+        key_id="$(gh repo deploy-key list \
+            -R Guilospanck/homebrew-tap \
+            --json id,key \
+            --jq ".[] | select(.key == \"$public_key\") | .id" || true)"
+        if [[ -n "$key_id" ]] && gh repo deploy-key delete "$key_id" -R Guilospanck/homebrew-tap; then
+            echo "✓ Removed the deploy key." >&2
+        else
+            echo "⚠ Could not remove the deploy key automatically; remove it from homebrew-tap manually." >&2
+        fi
+        exit 1
+    fi
+    echo "✓ Deploy key added to homebrew-tap (write) and stored as HOMEBREW_TAP_DEPLOY_KEY."
+
 # --- Runtime control -----------------------------------------------------
 
 # Stop any running instance.
