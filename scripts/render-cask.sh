@@ -6,8 +6,9 @@
 #                       so style problems are caught before the tag is pushed.
 #   - Release workflow — renders with the real sha and publishes to the tap.
 #
-# $version / $sha256 are expanded here; #{version} / #{appdir} are left intact
-# for Homebrew's own Ruby interpolation at install time.
+# $version / $sha256 are expanded here; #{version} is left intact for
+# Homebrew's own Ruby interpolation, and {{appdir}} is an install-steps
+# template token Homebrew expands at install time.
 set -euo pipefail
 
 if [[ $# -ne 2 ]]; then
@@ -34,9 +35,9 @@ cask "ai-usage-bar" do
 
   # App is ad-hoc signed (not notarized): clear the download quarantine
   # so Gatekeeper lets it launch.
-  postflight do
-    system_command "/usr/bin/xattr",
-                   args: ["-dr", "com.apple.quarantine", "#{appdir}/AI Usage Bar.app"]
+  postflight_steps do
+    run "/usr/bin/xattr",
+        args: ["-dr", "com.apple.quarantine", "{{appdir}}/AI Usage Bar.app"]
   end
 
   zap trash: "~/Library/Preferences/com.reaktor.aiusagebar.plist"
