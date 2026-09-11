@@ -73,8 +73,12 @@ lint:
     echo "✓ cask lint clean"
 
 # Bump the version, commit, tag, and push — triggers the Release workflow.
+# Optional notes (Markdown) go into the annotated tag and appear at the top of
+# the GitHub Release, above the auto-generated changelog.
 # Usage: just tag 1.1
-tag version:
+#        just tag 1.1 "Fixes the Keychain prompt."
+#        just tag 1.1 "$(cat notes.md)"
+tag version $notes="":
     #!/usr/bin/env bash
     set -euo pipefail
     ver="{{version}}"
@@ -94,7 +98,13 @@ tag version:
     /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $ver" Info.plist
     git add Info.plist
     git commit -m "Release v$ver"
-    git tag "v$ver"
+    # `notes` arrives as an environment variable (the `$` on the parameter), so
+    # quotes, backticks, and newlines in it pass through untouched.
+    if [[ -n "${notes//[[:space:]]/}" ]]; then
+        git tag -a "v$ver" --cleanup=verbatim -m "$notes"
+    else
+        git tag "v$ver"
+    fi
     git push origin HEAD
     git push origin "v$ver"
     echo "✓ Pushed v$ver — CI will build, release, and update the tap."

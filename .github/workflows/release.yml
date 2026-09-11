@@ -40,9 +40,19 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          # Notes passed to `just tag` live in the annotated tag's message.
+          # Re-fetch the tag itself: checkout may have created it locally as a
+          # lightweight tag pointing at the commit, dropping the annotation.
+          git fetch --force origin "refs/tags/${GITHUB_REF_NAME}:refs/tags/${GITHUB_REF_NAME}"
+          notes_args=()
+          if [[ "$(git cat-file -t "refs/tags/${GITHUB_REF_NAME}")" == "tag" ]]; then
+            # --notes is prepended to the generated changelog.
+            notes_args=(--notes "$(git tag -l --format='%(contents)' "$GITHUB_REF_NAME")")
+          fi
           gh release create "$GITHUB_REF_NAME" \
             "${{ steps.pkg.outputs.zip }}" \
             --title "$GITHUB_REF_NAME" \
+            ${notes_args[@]+"${notes_args[@]}"} \
             --generate-notes
 
       - name: Update Homebrew cask in tap
