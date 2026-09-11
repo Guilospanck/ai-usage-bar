@@ -131,6 +131,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if let err = snap.error {
             menu.addItem(disabledItem("  ⚠ \(err)"))
         }
+        if snap.autoRefreshPaused {
+            menu.addItem(disabledItem("  Auto-refresh paused — Refresh Now to retry", small: true))
+        }
 
         let sectionRows = rows(for: snap)
         if sectionRows.isEmpty {
@@ -227,7 +230,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func refreshNow() {
-        Task { await store.refresh() }
+        Task { await store.refresh(manual: true) }
     }
 
     @objc private func toggleLogin() {

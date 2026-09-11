@@ -68,7 +68,7 @@ struct AIUsageBarApp {
             // Claude
             print("══ Claude: api.anthropic.com/api/oauth/usage ══")
             do {
-                let t = try ClaudeCredentials.load()
+                let t = try await ClaudeCredentials.load()
                 await rawDump("https://api.anthropic.com/api/oauth/usage", headers: [
                     "Authorization": "Bearer \(t.accessToken)",
                     "anthropic-beta": "oauth-2025-04-20",

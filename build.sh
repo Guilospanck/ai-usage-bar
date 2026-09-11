@@ -25,8 +25,8 @@ mkdir -p "${BUNDLE}/Contents/Resources"
 cp "$BIN_PATH" "${BUNDLE}/Contents/MacOS/${BIN_NAME}"
 cp Info.plist "${BUNDLE}/Contents/Info.plist"
 
-# Ad-hoc code signature. SMAppService and Keychain access are happier with a
-# signature; replace "-" with your Developer ID for distribution.
+# Ad-hoc code signature. SMAppService is happier with a signature; replace "-"
+# with your Developer ID for distribution.
 echo "▶ Code signing (ad-hoc)…"
 codesign --force --deep --sign - "$BUNDLE" || {
     echo "⚠ codesign failed; app will still run but login-item may be limited." >&2

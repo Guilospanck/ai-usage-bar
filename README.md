@@ -81,9 +81,6 @@ open "/Applications/AI Usage Bar.app"
 
 The app appears in the **menu bar** (no Dock icon).
 
-- **First run:** macOS prompts *"AI Usage Bar wants to use information stored in
-  Claude Code-credentials"* → click **Always Allow** (that's the Claude Keychain
-  token). Allow any login-keychain prompt too.
 - **Start at boot:** click the menu-bar item → **Launch at Login**.
 
 Because you build it locally, Gatekeeper does **not** block it (no quarantine flag),
@@ -124,10 +121,15 @@ and calls the same undocumented usage endpoints they use:
 
 | Provider | Endpoint | Token source |
 |----------|----------|--------------|
-| Claude   | `GET api.anthropic.com/api/oauth/usage` | Keychain `Claude Code-credentials`, fallback `~/.claude/.credentials.json` |
+| Claude   | `GET api.anthropic.com/api/oauth/usage` | Keychain `Claude Code-credentials` for account `$USER` (read via `/usr/bin/security`), fallback `~/.claude/.credentials.json` |
 | OpenAI   | `GET chatgpt.com/backend-api/wham/usage` | `~/.codex/auth.json` |
 
 It re-reads the tokens on every poll, so it rides on the CLIs keeping them fresh.
+Claude credentials are located the way Claude Code does it: with `CLAUDE_CONFIG_DIR`
+set, the Keychain item gets a hash suffix and the file lives in that directory.
+Apps launched from Finder or at login don't see shell variables, so only the default
+`~/.claude` setup works there; a custom config dir is picked up when you run the
+binary from a terminal (e.g. `--probe`).
 Poll interval defaults to **120s**; last-good values are kept on network/429 errors.
 
 For **Claude**, usage is read from the endpoint's structured `limits[]` array, which
@@ -142,12 +144,33 @@ the pinned window (OpenAI has no "Fable" cap), it falls back to that provider's 
 
 ## Troubleshooting
 
-- **First run shows a Keychain prompt** ("AI Usage Bar wants to use information
-  stored in Claude Code-credentials"). Click **Always Allow**. This is expected —
-  the Claude token lives in the login Keychain.
-- **Claude shows "Not signed in"** — run `claude` once and authenticate. If your
-  token is Keychain-only and the prompt was denied, re-grant access in
-  *Keychain Access → Claude Code-credentials → Access Control*.
+- **Keychain prompt naming `security` for "Claude Code-credentials" — click
+  Deny.** AI Usage Bar never needs this prompt: it reads the token through
+  `/usr/bin/security`, which Claude Code puts on the item's access list when it
+  creates the item. A prompt means `security` isn't on that list (the item was
+  imported, restored, or its access list was edited) **or another process is
+  trying to read your token** — the dialog can't tell you which process asked.
+  - Don't click **Allow** or **Always Allow**. *Always Allow* trusts the
+    `security` tool itself, not AI Usage Bar, so every process running as your
+    user could read the token without asking from then on.
+  - To fix it, have Claude Code recreate the item: `claude auth logout`, then
+    `claude auth login`.
+
+  After a denial the menu shows "Keychain access denied"; an unanswered prompt
+  gives up after 30s ("Keychain read timed out"). Either way Claude stops
+  refreshing automatically, so the prompt doesn't keep coming back — its
+  menu-bar number gets a ⏸ and stays at the last value. Click **Refresh Now**
+  to try again.
+- **Old AI Usage Bar entries in the item's access list** — earlier versions
+  read the Keychain directly, so *Keychain Access → Claude
+  Code-credentials → Access Control* may list `AI Usage Bar.app` / `AIUsageBar`.
+  You can remove them once no older copy of the app is in use (don't remove
+  `security`, and leave any Claude entries alone).
+- **Claude shows "Keychain locked"** — unlock the login keychain (logging in
+  normally does it) and wait for the next poll.
+- **Claude shows "Keychain access denied"** — see the Keychain prompt item above.
+- **Claude shows "Not signed in"** — run `claude` once and authenticate. With a
+  custom `CLAUDE_CONFIG_DIR`, see *How it works* above.
 - **OpenAI shows "Not signed in"** — run `codex` once and authenticate so
   `~/.codex/auth.json` exists.
 - **OpenAI plan shape** — Plus/Pro report rolling **5-hour + Weekly** windows;

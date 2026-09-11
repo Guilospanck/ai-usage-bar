@@ -10,7 +10,7 @@ struct AnthropicProvider: UsageProvider {
     func fetch(previous: ProviderUsage?) async -> ProviderUsage {
         let now = Date()
         do {
-            let token = try ClaudeCredentials.load()
+            let token = try await ClaudeCredentials.load()
             let data = try await HTTP.get(url, headers: [
                 "Authorization": "Bearer \(token.accessToken)",
                 "anthropic-beta": "oauth-2025-04-20",
@@ -73,6 +73,9 @@ struct AnthropicProvider: UsageProvider {
                 error: nil,
                 fetchedAt: now
             )
+        } catch let e as ClaudeCredentials.KeychainError {
+            return .failure(kind, error: e.errorDescription ?? "Error", keeping: previous, at: now,
+                            pauseAutoRefresh: e.promptNotApproved)
         } catch let e as UsageError {
             return .failure(kind, error: e.errorDescription ?? "Error", keeping: previous, at: now)
         } catch {

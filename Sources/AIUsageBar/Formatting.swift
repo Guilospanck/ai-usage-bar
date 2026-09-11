@@ -45,12 +45,15 @@ enum Format {
     /// One provider paired with its menu-bar percentage text (e.g. "42%" or "—"),
     /// resolved for that provider's own chosen metric. Falls back to a provider's
     /// highest window when it lacks the selected one (e.g. OpenAI has no "Fable"
-    /// cap), so every provider still shows a number. Shared by plain/icon titles.
+    /// cap), so every provider still shows a number. A provider whose
+    /// auto-refresh is paused gets a trailing "⏸", since its number is going
+    /// stale. Shared by plain/icon titles.
     static func menuBarPieces(_ snapshots: [ProviderUsage]) -> [(provider: ProviderKind, text: String)] {
         snapshots.map { snap in
             let metric = Settings.titleMetric(for: snap.provider)
             let w = window(for: metric, in: snap) ?? window(for: .worst, in: snap)
-            return (snap.provider, w.map { percent($0.usedPercent) } ?? "—")
+            let text = w.map { percent($0.usedPercent) } ?? "—"
+            return (snap.provider, snap.autoRefreshPaused ? text + " ⏸" : text)
         }
     }
 

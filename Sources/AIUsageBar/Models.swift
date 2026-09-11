@@ -45,6 +45,9 @@ struct ProviderUsage {
     /// known-good values (if any) so the UI can keep showing something useful.
     let error: String?
     let fetchedAt: Date
+    /// When true, automatic refreshes skip this provider until the user clicks
+    /// Refresh Now — for failures where retrying on a timer would do harm.
+    var autoRefreshPaused: Bool = false
 
     /// Every window this provider reports, flattened — handy for "worst window" math.
     var allWindows: [UsageWindow] {
@@ -54,14 +57,16 @@ struct ProviderUsage {
     static func failure(_ provider: ProviderKind,
                         error: String,
                         keeping previous: ProviderUsage?,
-                        at date: Date) -> ProviderUsage {
+                        at date: Date,
+                        pauseAutoRefresh: Bool = false) -> ProviderUsage {
         ProviderUsage(provider: provider,
                       planName: previous?.planName,
                       fiveHour: previous?.fiveHour,
                       weekly: previous?.weekly,
                       scoped: previous?.scoped ?? [],
                       error: error,
-                      fetchedAt: date)
+                      fetchedAt: date,
+                      autoRefreshPaused: pauseAutoRefresh)
     }
 }
 

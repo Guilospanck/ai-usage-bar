@@ -37,15 +37,18 @@ final class UsageStore {
         loopTask = nil
     }
 
-    /// Refresh all providers concurrently, then publish once.
-    func refresh() async {
+    /// Refresh providers concurrently, then publish once. Automatic refreshes
+    /// skip providers whose auto-refresh is paused; a `manual` refresh (Refresh
+    /// Now) retries every provider.
+    func refresh(manual: Bool = false) async {
         guard !isRefreshing else { return }
         isRefreshing = true
         onUpdate?()
 
         let snapshot = latest
+        let due = providers.filter { manual || snapshot[$0.kind]?.autoRefreshPaused != true }
         let results = await withTaskGroup(of: ProviderUsage.self) { group -> [ProviderUsage] in
-            for provider in providers {
+            for provider in due {
                 let previous = snapshot[provider.kind]
                 group.addTask { await provider.fetch(previous: previous) }
             }
