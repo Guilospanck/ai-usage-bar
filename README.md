@@ -190,6 +190,8 @@ the pinned window (OpenAI has no "Fable" cap), it falls back to that provider's 
 Package.swift                     SwiftPM executable (macOS 13+)
 Info.plist                        LSUIElement agent + bundle id
 build.sh                          build + bundle + ad-hoc sign
+Resources/AppIcon.icns            app icon (regenerate: `just icon`)
+scripts/make-icon.swift           draws the icon + writes the .icns
 Sources/AIUsageBar/
   main.swift                      entry point (+ --probe mode)
   AppDelegate.swift               NSStatusItem, menu, rendering

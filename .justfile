@@ -52,6 +52,10 @@ uninstall:
     rm -rf "/Applications/{{app_name}}.app"
     @echo "✓ Removed /Applications/{{app_name}}.app"
 
+# Regenerate Resources/AppIcon.icns from scripts/make-icon.swift.
+icon:
+    swift scripts/make-icon.swift
+
 _ensure-app:
     @test -d "{{bundle}}" || just app
 

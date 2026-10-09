@@ -6,8 +6,10 @@
 	<string>AI Usage Bar</string>
 	<key>CFBundleExecutable</key>
 	<string>AIUsageBar</string>
+	<key>CFBundleIconFile</key>
+	<string>AppIcon</string>
 	<key>CFBundleIdentifier</key>
-	<string>com.reaktor.aiusagebar</string>
+	<string>com.guilospanck.aiusagebar</string>
 	<key>CFBundleName</key>
 	<string>AI Usage Bar</string>
 	<key>CFBundlePackageType</key>

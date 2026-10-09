@@ -40,6 +40,6 @@ cask "ai-usage-bar" do
         args: ["-dr", "com.apple.quarantine", "{{appdir}}/AI Usage Bar.app"]
   end
 
-  zap trash: "~/Library/Preferences/com.reaktor.aiusagebar.plist"
+  zap trash: "~/Library/Preferences/com.guilospanck.aiusagebar.plist"
 end
 RUBY

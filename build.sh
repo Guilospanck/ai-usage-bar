@@ -24,6 +24,7 @@ mkdir -p "${BUNDLE}/Contents/MacOS"
 mkdir -p "${BUNDLE}/Contents/Resources"
 cp "$BIN_PATH" "${BUNDLE}/Contents/MacOS/${BIN_NAME}"
 cp Info.plist "${BUNDLE}/Contents/Info.plist"
+cp Resources/AppIcon.icns "${BUNDLE}/Contents/Resources/AppIcon.icns"
 
 # Ad-hoc code signature. SMAppService is happier with a signature; replace "-"
 # with your Developer ID for distribution.

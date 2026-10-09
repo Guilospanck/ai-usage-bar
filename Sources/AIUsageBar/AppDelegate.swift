@@ -16,6 +16,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Menu-bar agent: no dock icon, no main window.
         NSApp.setActivationPolicy(.accessory)
+        Settings.migrateLegacyDefaults()
 
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         statusItem.button?.title = "AI …"
