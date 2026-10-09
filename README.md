@@ -75,7 +75,7 @@ Without `just`, the equivalent is:
 
 ```bash
 ./build.sh
-cp -R "build/AI Usage Bar.app" /Applications/
+cp -R "build.noindex/AI Usage Bar.app" /Applications/
 open "/Applications/AI Usage Bar.app"
 ```
 

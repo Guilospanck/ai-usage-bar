@@ -6,7 +6,9 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 APP_NAME="AI Usage Bar"
-BUNDLE="build/${APP_NAME}.app"
+# The ".noindex" suffix keeps Spotlight (and launchers built on it, e.g. Raycast)
+# from listing this copy as a second installed app.
+BUNDLE="build.noindex/${APP_NAME}.app"
 BIN_NAME="AIUsageBar"
 
 echo "▶ Building release binary…"

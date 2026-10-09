@@ -4,7 +4,7 @@
 Package.resolved
 
 # App bundle output from build.sh
-build/
+build.noindex/
 
 # Xcode (if ever opened there)
 DerivedData/

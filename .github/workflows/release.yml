@@ -30,7 +30,7 @@ jobs:
           set -euo pipefail
           VERSION="${{ steps.v.outputs.version }}"
           ZIP="AI-Usage-Bar-${VERSION}.zip"
-          ditto -c -k --keepParent "build/AI Usage Bar.app" "$ZIP"
+          ditto -c -k --keepParent "build.noindex/AI Usage Bar.app" "$ZIP"
           SHA="$(shasum -a 256 "$ZIP" | awk '{print $1}')"
           echo "zip=$ZIP" >> "$GITHUB_OUTPUT"
           echo "sha256=$SHA" >> "$GITHUB_OUTPUT"

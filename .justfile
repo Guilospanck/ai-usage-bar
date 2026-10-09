@@ -3,7 +3,7 @@
 
 app_name := "AI Usage Bar"
 bin      := "AIUsageBar"
-bundle   := "build/" + app_name + ".app"
+bundle   := "build.noindex/" + app_name + ".app"
 
 # Show available recipes (default).
 default:
@@ -170,5 +170,5 @@ doctor:
 
 # Remove all build artifacts.
 clean:
-    rm -rf .build build
-    @echo "✓ Cleaned .build and build/"
+    rm -rf .build build.noindex
+    @echo "✓ Cleaned .build and build.noindex/"
