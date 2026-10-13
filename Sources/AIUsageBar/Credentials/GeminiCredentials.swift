@@ -1,11 +1,11 @@
 import CryptoKit
 import Foundation
 
-/// Reads the OAuth access token that Antigravity CLI stores.
+/// Reads the OAuth access token that Gemini CLI stores.
 ///
-/// On macOS Antigravity keeps the token in a Keychain generic-password item;
+/// On macOS Gemini keeps the token in a Keychain generic-password item;
 ///
-enum AntigravityCredentials {
+enum GeminiCredentials {
 
     struct OAuthToken: Decodable {
         let accessToken: String
@@ -26,7 +26,6 @@ enum AntigravityCredentials {
     }
 
     struct Token: Decodable {
-
         let token: OAuthToken
         let authMethod: String
         let idToken: String
@@ -64,7 +63,7 @@ enum AntigravityCredentials {
             case .locked: return "Keychain locked"
             case .denied: return "Keychain access denied"
             case .timedOut: return "Keychain read timed out"
-            case .malformed: return "Unreadable Antigravity credentials"
+            case .malformed: return "Unreadable Gemini credentials"
             case .failed(let status, let message):
                 return message.isEmpty
                     ? "Keychain read failed (exit \(status))"
@@ -73,7 +72,7 @@ enum AntigravityCredentials {
         }
     }
 
-    /// Where Antigravity keeps its credentials for the current environment.
+    /// Where Gemini keeps its credentials for the current environment.
     struct Location {
         let service: String
         let account: String
@@ -110,28 +109,23 @@ enum AntigravityCredentials {
 
     private static func parse(_ raw: String) -> Token? {
         let prefix = "go-keyring-base64:"
+        let raw = raw.trimmingCharacters(in: .whitespacesAndNewlines)
 
-        guard raw.hasPrefix(prefix) else {
+        guard raw.hasPrefix(prefix),
+            let data = Data(base64Encoded: String(raw.dropFirst(prefix.count)))
+        else {
             return nil
         }
 
-        let encoded = String(raw.dropFirst(prefix.count))
-
-        guard let data = Data(base64Encoded: encoded) else {
-            return nil
-        }
-
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-
-        let token: AntigravityCredentials.Token
         do {
-            token = try decoder.decode(AntigravityCredentials.self.Token, from: data)
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+
+            return try decoder.decode(Token.self, from: data)
         } catch {
+            print("Failed to decode credentials: \(error)")
             return nil
         }
-
-        return token
     }
 
     // MARK: - Keychain
@@ -161,7 +155,7 @@ enum AntigravityCredentials {
     }
 }
 
-extension AntigravityCredentials.Location {
+extension GeminiCredentials.Location {
     static func current() -> Self {
 
         let service = "gemini"
@@ -231,12 +225,12 @@ private enum SecurityCommand {
 
                     switch control.stopReason {
                     case .timedOut?:
-                        continuation.resume(throwing: AntigravityCredentials.KeychainError.timedOut)
+                        continuation.resume(throwing: GeminiCredentials.KeychainError.timedOut)
                     case .cancelled?:
                         continuation.resume(throwing: CancellationError())
                     case .outputTooLarge?:
                         continuation.resume(
-                            throwing: AntigravityCredentials.KeychainError.malformed)
+                            throwing: GeminiCredentials.KeychainError.malformed)
                     case nil:
                         continuation.resume(
                             returning: Result(

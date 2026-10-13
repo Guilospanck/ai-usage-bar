@@ -4,12 +4,14 @@ import Foundation
 enum ProviderKind: String, CaseIterable {
     case claude = "Claude"
     case openai = "OpenAI"
+    case gemini = "Gemini"
 
     /// Single-character glyph used in the compact menu-bar title.
     var shortSymbol: String {
         switch self {
         case .claude: return "C"
         case .openai: return "O"
+        case .gemini: return "G"
         }
     }
 }
@@ -54,27 +56,30 @@ struct ProviderUsage {
         [fiveHour, weekly].compactMap { $0 } + scoped.map { $0.window }
     }
 
-    static func failure(_ provider: ProviderKind,
-                        error: String,
-                        keeping previous: ProviderUsage?,
-                        at date: Date,
-                        pauseAutoRefresh: Bool = false) -> ProviderUsage {
-        ProviderUsage(provider: provider,
-                      planName: previous?.planName,
-                      fiveHour: previous?.fiveHour,
-                      weekly: previous?.weekly,
-                      scoped: previous?.scoped ?? [],
-                      error: error,
-                      fetchedAt: date,
-                      autoRefreshPaused: pauseAutoRefresh)
+    static func failure(
+        _ provider: ProviderKind,
+        error: String,
+        keeping previous: ProviderUsage?,
+        at date: Date,
+        pauseAutoRefresh: Bool = false
+    ) -> ProviderUsage {
+        ProviderUsage(
+            provider: provider,
+            planName: previous?.planName,
+            fiveHour: previous?.fiveHour,
+            weekly: previous?.weekly,
+            scoped: previous?.scoped ?? [],
+            error: error,
+            fetchedAt: date,
+            autoRefreshPaused: pauseAutoRefresh)
     }
 }
 
 /// Errors surfaced by the credential readers / providers, with user-facing text.
 enum UsageError: LocalizedError {
     case notAuthenticated(String)
-    case unauthorized       // 401 — token present but rejected/expired
-    case rateLimited        // 429
+    case unauthorized  // 401 — token present but rejected/expired
+    case rateLimited  // 429
     case http(Int)
     case badResponse(String)
 

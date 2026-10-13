@@ -11,7 +11,9 @@ private struct RowSelection {
 final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private var statusItem: NSStatusItem!
-    private let store = UsageStore(providers: [AnthropicProvider(), OpenAIProvider()])
+    private let store = UsageStore(providers: [
+        AnthropicProvider(), OpenAIProvider(), GeminiProvider(),
+    ])
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Menu-bar agent: no dock icon, no main window.
@@ -36,9 +38,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let snapshots = store.ordered
         if let button = statusItem.button {
             button.image = nil
-            button.attributedTitle = (store.isRefreshing && snapshots.isEmpty)
-                ? NSAttributedString(string: "AI …",
-                                     attributes: [.font: NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .regular)])
+            button.attributedTitle =
+                (store.isRefreshing && snapshots.isEmpty)
+                ? NSAttributedString(
+                    string: "AI …",
+                    attributes: [
+                        .font: NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .regular)
+                    ])
                 : menuBarTitle(snapshots)
         }
         statusItem.menu = buildMenu(snapshots)
@@ -61,8 +67,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             let attachment = NSTextAttachment()
             attachment.image = icon
             // Center the glyph vertically against the digits' cap height.
-            attachment.bounds = CGRect(x: 0, y: (font.capHeight - icon.size.height) / 2,
-                                       width: icon.size.width, height: icon.size.height)
+            attachment.bounds = CGRect(
+                x: 0, y: (font.capHeight - icon.size.height) / 2,
+                width: icon.size.width, height: icon.size.height)
             result.append(NSAttributedString(attachment: attachment))
             result.append(NSAttributedString(string: " \(piece.text)", attributes: textAttrs))
         }
@@ -71,14 +78,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func buildMenu(_ snapshots: [ProviderUsage]) -> NSMenu {
         let menu = NSMenu()
-        menu.autoenablesItems = false // we manage enabled state explicitly
+        menu.autoenablesItems = false  // we manage enabled state explicitly
 
         if snapshots.isEmpty {
             menu.addItem(disabledItem("Loading…"))
         } else {
             // Pad labels to a width shared across every provider so the bars and
             // percentages line up in one column throughout the whole menu.
-            let labelWidth = snapshots
+            let labelWidth =
+                snapshots
                 .flatMap { rows(for: $0) }
                 .map { $0.label.count }
                 .max() ?? 0
@@ -88,30 +96,35 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
 
-        let refresh = NSMenuItem(title: store.isRefreshing ? "Refreshing…" : "Refresh Now",
-                                 action: #selector(refreshNow), keyEquivalent: "r")
+        let refresh = NSMenuItem(
+            title: store.isRefreshing ? "Refreshing…" : "Refresh Now",
+            action: #selector(refreshNow), keyEquivalent: "r")
         refresh.target = self
         refresh.isEnabled = !store.isRefreshing
         menu.addItem(refresh)
 
         if LoginItem.isAvailable {
-            let login = NSMenuItem(title: "Launch at Login",
-                                   action: #selector(toggleLogin), keyEquivalent: "")
+            let login = NSMenuItem(
+                title: "Launch at Login",
+                action: #selector(toggleLogin), keyEquivalent: "")
             login.target = self
             login.state = LoginItem.isEnabled ? .on : .off
             menu.addItem(login)
         }
 
         menu.addItem(.separator())
-        let quit = NSMenuItem(title: "Quit AI Usage Bar",
-                              action: #selector(quit), keyEquivalent: "q")
+        let quit = NSMenuItem(
+            title: "Quit AI Usage Bar",
+            action: #selector(quit), keyEquivalent: "q")
         quit.target = self
         menu.addItem(quit)
         return menu
     }
 
     /// This provider's windows paired with the metric that selects them.
-    private func rows(for snap: ProviderUsage) -> [(label: String, window: UsageWindow, metric: TitleMetric)] {
+    private func rows(for snap: ProviderUsage) -> [(
+        label: String, window: UsageWindow, metric: TitleMetric
+    )] {
         var rows: [(label: String, window: UsageWindow, metric: TitleMetric)] = []
         if let w = snap.fiveHour { rows.append(("5-hour", w, .fiveHour)) }
         if let w = snap.weekly { rows.append(("Weekly", w, .weekly)) }
@@ -151,17 +164,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         } else if chosen == .active, let active = sectionRows.first(where: { $0.window.isActive }) {
             displayed = active.metric
         } else {
-            displayed = sectionRows.max(by: { $0.window.usedPercent < $1.window.usedPercent })?.metric
+            displayed =
+                sectionRows.max(by: { $0.window.usedPercent < $1.window.usedPercent })?.metric
         }
 
         for row in sectionRows {
-            addWindowItem(row, provider: snap.provider, labelWidth: labelWidth,
-                          selected: row.metric == displayed, to: menu)
+            addWindowItem(
+                row, provider: snap.provider, labelWidth: labelWidth,
+                selected: row.metric == displayed, to: menu)
         }
     }
 
-    private func addWindowItem(_ row: (label: String, window: UsageWindow, metric: TitleMetric),
-                               provider: ProviderKind, labelWidth: Int, selected: Bool, to menu: NSMenu) {
+    private func addWindowItem(
+        _ row: (label: String, window: UsageWindow, metric: TitleMetric),
+        provider: ProviderKind, labelWidth: Int, selected: Bool, to menu: NSMenu
+    ) {
         let window = row.window
         let paddedLabel = row.label.padding(toLength: labelWidth, withPad: " ", startingAt: 0)
         let pct = String(format: "%3d%%", Int(window.usedPercent.rounded()))
@@ -200,7 +217,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         return item
     }
 
-    private func disabledItem(_ title: String, monospaced: Bool = false, small: Bool = false) -> NSMenuItem {
+    private func disabledItem(_ title: String, monospaced: Bool = false, small: Bool = false)
+        -> NSMenuItem
+    {
         let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
         var attrs: [NSAttributedString.Key: Any] = [:]
         if monospaced {

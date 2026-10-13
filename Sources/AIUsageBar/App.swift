@@ -31,7 +31,7 @@ struct AIUsageBarApp {
     /// Headless one-shot fetch used by `--probe`.
     @MainActor
     private static func runProbe() {
-        let providers: [UsageProvider] = [AnthropicProvider(), OpenAIProvider()]
+        let providers: [UsageProvider] = [AnthropicProvider(), OpenAIProvider(), GeminiProvider()]
         let sema = DispatchSemaphore(value: 0)
         // Detached so the fetches run off the main actor — we block the main
         // thread on `sema.wait()` below, so a main-actor Task would deadlock.
@@ -42,14 +42,20 @@ struct AIUsageBarApp {
                 if let plan = u.planName { print("  plan:   \(plan)") }
                 if let e = u.error { print("  error:  \(e)") }
                 if let w = u.fiveHour {
-                    print("  5-hour: \(Format.percent(w.usedPercent))  \(Format.resetCountdown(w.resetsAt) ?? "")")
+                    print(
+                        "  5-hour: \(Format.percent(w.usedPercent))  \(Format.resetCountdown(w.resetsAt) ?? "")"
+                    )
                 }
                 if let w = u.weekly {
-                    print("  weekly: \(Format.percent(w.usedPercent))  \(Format.resetCountdown(w.resetsAt) ?? "")")
+                    print(
+                        "  weekly: \(Format.percent(w.usedPercent))  \(Format.resetCountdown(w.resetsAt) ?? "")"
+                    )
                 }
                 for named in u.scoped {
                     let active = named.window.isActive ? " (active)" : ""
-                    print("  \(named.label): \(Format.percent(named.window.usedPercent))  \(Format.resetCountdown(named.window.resetsAt) ?? "")\(active)")
+                    print(
+                        "  \(named.label): \(Format.percent(named.window.usedPercent))  \(Format.resetCountdown(named.window.resetsAt) ?? "")\(active)"
+                    )
                 }
             }
             sema.signal()
@@ -69,12 +75,14 @@ struct AIUsageBarApp {
             print("══ Claude: api.anthropic.com/api/oauth/usage ══")
             do {
                 let t = try await ClaudeCredentials.load()
-                await rawDump("https://api.anthropic.com/api/oauth/usage", headers: [
-                    "Authorization": "Bearer \(t.accessToken)",
-                    "anthropic-beta": "oauth-2025-04-20",
-                    "User-Agent": "claude-code/2.1.183",
-                    "Content-Type": "application/json"
-                ])
+                await rawDump(
+                    "https://api.anthropic.com/api/oauth/usage",
+                    headers: [
+                        "Authorization": "Bearer \(t.accessToken)",
+                        "anthropic-beta": "oauth-2025-04-20",
+                        "User-Agent": "claude-code/2.1.183",
+                        "Content-Type": "application/json",
+                    ])
             } catch { print("  creds error: \(error.localizedDescription)") }
 
             // OpenAI / Codex
@@ -85,10 +93,25 @@ struct AIUsageBarApp {
                 var headers = [
                     "Authorization": "Bearer \(t.accessToken)",
                     "User-Agent": "codex-cli",
-                    "Content-Type": "application/json"
+                    "Content-Type": "application/json",
                 ]
                 if let id = t.accountId { headers["ChatGPT-Account-Id"] = id }
                 await rawDump("https://chatgpt.com/backend-api/wham/usage", headers: headers)
+            } catch { print("  creds error: \(error.localizedDescription)") }
+
+            // Gemini
+            print("\n══ Gemini: cloudcode-pa.googleapis.com/v1internal:fetchAvailableModels ══")
+            do {
+                let t = try await GeminiCredentials.load()
+                print(t)
+                let headers = [
+                    "Authorization": "Bearer \(t.token.accessToken)",
+                    "User-Agent": "antigravity",
+                    "Content-Type": "application/json",
+                ]
+                await rawDump(
+                    "https://cloudcode-pa.googleapis.com/v1internal:fetchAvailableModels",
+                    headers: headers, method: "POST")
             } catch { print("  creds error: \(error.localizedDescription)") }
 
             sema.signal()
@@ -96,10 +119,12 @@ struct AIUsageBarApp {
         sema.wait()
     }
 
-    private static func rawDump(_ urlString: String, headers: [String: String]) async {
+    private static func rawDump(
+        _ urlString: String, headers: [String: String], method: String? = "GET"
+    ) async {
         guard let url = URL(string: urlString) else { return }
         var req = URLRequest(url: url)
-        req.httpMethod = "GET"
+        req.httpMethod = method
         for (k, v) in headers { req.setValue(v, forHTTPHeaderField: k) }
         do {
             // Ephemeral session: never persist these (PII-bearing) responses or

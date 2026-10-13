@@ -36,6 +36,23 @@ enum HTTP {
         default: throw UsageError.http(http.statusCode)
         }
     }
+
+    static func post(_ url: URL, headers: [String: String]) async throws -> Data {
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        for (k, v) in headers { req.setValue(v, forHTTPHeaderField: k) }
+
+        let (data, response) = try await session.data(for: req)
+        guard let http = response as? HTTPURLResponse else {
+            throw UsageError.badResponse("No HTTP response")
+        }
+        switch http.statusCode {
+        case 200...299: return data
+        case 401, 403: throw UsageError.unauthorized
+        case 429: throw UsageError.rateLimited
+        default: throw UsageError.http(http.statusCode)
+        }
+    }
 }
 
 /// Coerce a JSON number (Int, Double, or numeric String) to Double, defaulting to 0.
