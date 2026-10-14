@@ -115,7 +115,8 @@ tag version $notes="":
     if git rev-parse "v$ver" >/dev/null 2>&1; then
         echo "✗ tag v$ver already exists." >&2; exit 1
     fi
-    # Pre-flight: catch cask style/deprecation issues before tagging or pushing.
+    # Pre-flight: require a successful app build and cask lint before releasing.
+    just app
     just lint
     /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $ver" Info.plist
     /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $ver" Info.plist
