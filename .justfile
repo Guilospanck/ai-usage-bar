@@ -70,10 +70,30 @@ lint:
     # applies the cask cops (a loose .rb elsewhere gets the generic Ruby
     # ruleset instead — Sorbet sigils, frozen-string comment, etc.).
     # Version/sha are placeholders; neither affects style.
-    caskdir="$(mktemp -d)/Casks"
+    tmp="$(mktemp -d)"
+    trap 'rm -rf -- "$tmp"' EXIT
+    caskdir="$tmp/Casks"
     mkdir -p "$caskdir"
     ./scripts/render-cask.sh 0.0.0 "$(printf '%064d' 0)" > "$caskdir/ai-usage-bar.rb"
-    brew style "$caskdir/ai-usage-bar.rb"
+    prefix="$(brew --prefix)"
+    library="$prefix/Library/Homebrew"
+    if [[ -d "$library" && "$(cd "$library" && pwd -P)" == /nix/store/* ]]; then
+        # Homebrew installs lint gems inside its own Library. Nix's copy is
+        # immutable, so run the same code from a disposable writable copy.
+        source_repo="$(cd -P "$library" && cd ../.. && pwd -P)"
+        mkdir -p "$tmp/brew"
+        cp -R "$source_repo/." "$tmp/brew/"
+        chmod -R u+w "$tmp/brew"
+        HOMEBREW_PREFIX="$prefix" \
+        HOMEBREW_REPOSITORY="$tmp/brew" \
+        HOMEBREW_LIBRARY="$tmp/brew/Library" \
+        HOMEBREW_BREW_FILE="$(command -v brew)" \
+        HOMEBREW_USER_CONFIG_HOME="$tmp/brew/config" \
+        HOMEBREW_DEVELOPER=1 HOMEBREW_NO_AUTO_UPDATE=1 \
+            /bin/bash "$tmp/brew/Library/Homebrew/brew.sh" style "$caskdir/ai-usage-bar.rb"
+    else
+        brew style "$caskdir/ai-usage-bar.rb"
+    fi
     echo "✓ cask lint clean"
 
 # Bump the version, commit, tag, and push — triggers the Release workflow.
@@ -95,8 +115,7 @@ tag version $notes="":
     if git rev-parse "v$ver" >/dev/null 2>&1; then
         echo "✗ tag v$ver already exists." >&2; exit 1
     fi
-    # Pre-flight: lint the cask CI will publish, so style/deprecation issues
-    # are caught here — before anything is tagged or pushed.
+    # Pre-flight: catch cask style/deprecation issues before tagging or pushing.
     just lint
     /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $ver" Info.plist
     /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $ver" Info.plist
