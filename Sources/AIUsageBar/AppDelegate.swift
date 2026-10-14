@@ -199,10 +199,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(item)
 
         var parts: [String] = []
+        if provider == .claude, row.metric == .fiveHour {
+            parts.append(Format.resetAt(window.resetsAt) ?? "resets at: not reported")
+        }
         if let sub = Format.resetCountdown(window.resetsAt) { parts.append(sub) }
         if let detail = window.detail { parts.append(detail) }
         if !parts.isEmpty {
-            menu.addItem(disabledItem("      " + parts.joined(separator: " · "), small: true))
+            let subtitle = parts.joined(separator: " · ")
+            let subitem = disabledItem(subtitle, small: true)
+            // Use the usage row's measured label column, not spaces in a smaller
+            // proportional font. All providers' subtitles start under the bars.
+            let prefix = String(repeating: " ", count: labelWidth + 3)
+            let indent = (prefix as NSString).size(withAttributes: [
+                .font: NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
+            ]).width
+            let paragraph = NSMutableParagraphStyle()
+            paragraph.firstLineHeadIndent = indent
+            paragraph.headIndent = indent
+            subitem.attributedTitle = NSAttributedString(
+                string: subtitle,
+                attributes: [
+                    .font: NSFont.systemFont(ofSize: 11),
+                    .foregroundColor: NSColor.secondaryLabelColor,
+                    .paragraphStyle: paragraph,
+                ])
+            menu.addItem(subitem)
         }
     }
 

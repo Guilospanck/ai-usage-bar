@@ -7,6 +7,15 @@ enum Format {
         "\(Int(value.rounded()))%"
     }
 
+    /// Absolute reset time in the user's local timezone.
+    static func resetAt(_ date: Date?) -> String? {
+        guard let date else { return nil }
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        return "resets at \(formatter.string(from: date))"
+    }
+
     /// A short "resets in 3h 12m" / "resets in 2d 4h" phrase.
     static func resetCountdown(_ date: Date?, now: Date = Date()) -> String? {
         guard let date else { return nil }
