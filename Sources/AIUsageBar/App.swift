@@ -31,7 +31,9 @@ struct AIUsageBarApp {
     /// Headless one-shot fetch used by `--probe`.
     @MainActor
     private static func runProbe() {
-        let providers: [UsageProvider] = [AnthropicProvider(), OpenAIProvider(), GeminiProvider()]
+        let providers: [UsageProvider] = [
+            AnthropicProvider(), OpenAIProvider(), AntigravityProvider(),
+        ]
         let sema = DispatchSemaphore(value: 0)
         // Detached so the fetches run off the main actor — we block the main
         // thread on `sema.wait()` below, so a main-actor Task would deadlock.
@@ -99,10 +101,11 @@ struct AIUsageBarApp {
                 await rawDump("https://chatgpt.com/backend-api/wham/usage", headers: headers)
             } catch { print("  creds error: \(error.localizedDescription)") }
 
-            // Gemini
-            print("\n══ Gemini: cloudcode-pa.googleapis.com/v1internal:fetchAvailableModels ══")
+            // Antigravity
+            print(
+                "\n══ Antigravity: cloudcode-pa.googleapis.com/v1internal:fetchAvailableModels ══")
             do {
-                let t = try await GeminiCredentials.load()
+                let t = try await AntigravityCredentials.load()
                 print(t)
                 let headers = [
                     "Authorization": "Bearer \(t.token.accessToken)",

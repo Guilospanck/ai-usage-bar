@@ -4,14 +4,14 @@ import Foundation
 enum ProviderKind: String, CaseIterable {
     case claude = "Claude"
     case openai = "OpenAI"
-    case gemini = "Gemini"
+    case antigravity = "Antigravity"
 
     /// Single-character glyph used in the compact menu-bar title.
     var shortSymbol: String {
         switch self {
         case .claude: return "C"
         case .openai: return "O"
-        case .gemini: return "G"
+        case .antigravity: return "G"
         }
     }
 }

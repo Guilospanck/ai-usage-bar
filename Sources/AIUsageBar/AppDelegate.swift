@@ -12,7 +12,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private var statusItem: NSStatusItem!
     private let store = UsageStore(providers: [
-        AnthropicProvider(), OpenAIProvider(), GeminiProvider(),
+        AnthropicProvider(), OpenAIProvider(), AntigravityProvider(),
     ])
 
     func applicationDidFinishLaunching(_ notification: Notification) {

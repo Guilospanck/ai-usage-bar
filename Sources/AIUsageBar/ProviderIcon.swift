@@ -6,7 +6,8 @@ import AppKit
 /// The logos are stored as their vector outlines on a 24×24 grid (the source
 /// SVG `viewBox`), pre-normalized to absolute `M`/`L`/`C`/`Z` commands — arcs
 /// already flattened to cubic béziers — so the tiny parser below is all the
-/// runtime needs. Source: Simple Icons (CC0).
+/// runtime needs. Sources: Simple Icons (CC0) for Claude/OpenAI;
+/// Lobe Icons for Antigravity (https://github.com/lobehub/lobe-icons).
 extension ProviderKind {
 
     /// A cached template image for this provider, sized to the given point size.
@@ -41,7 +42,7 @@ extension ProviderKind {
         switch kind {
         case .claude: return claudeOutline
         case .openai: return openAIOutline
-        case .gemini: return openAIOutline
+        case .antigravity: return antigravityOutline
         }
     }
 }
@@ -87,6 +88,10 @@ private func bezierPath(fromNormalizedSVG d: String) -> NSBezierPath? {
     }
     return path
 }
+
+// Antigravity's monochrome mark, normalized from relative cubic commands.
+private let antigravityOutline =
+    "M 21.751 22.607 C 23.091 23.612 25.101 22.942 23.259 21.099 C 17.73 15.74 18.904 1 12.037 1 C 5.17 1 6.342 15.74 0.815 21.1 C -1.195 23.109 0.982 23.611 2.322 22.606 C 7.514 19.089 7.179 12.892 12.037 12.892 C 16.894 12.892 16.559 19.089 21.751 22.607 Z"
 
 // Vector outlines on a 24×24 grid. See the file header.
 private let claudeOutline =

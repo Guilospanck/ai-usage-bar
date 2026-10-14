@@ -1,11 +1,11 @@
 import CryptoKit
 import Foundation
 
-/// Reads the OAuth access token that Gemini CLI stores.
+/// Reads the OAuth access token that Antigravity CLI stores.
 ///
-/// On macOS Gemini keeps the token in a Keychain generic-password item;
+/// On macOS Antigravity keeps the token in a Keychain generic-password item;
 ///
-enum GeminiCredentials {
+enum AntigravityCredentials {
 
     struct OAuthToken: Decodable {
         let accessToken: String
@@ -63,7 +63,7 @@ enum GeminiCredentials {
             case .locked: return "Keychain locked"
             case .denied: return "Keychain access denied"
             case .timedOut: return "Keychain read timed out"
-            case .malformed: return "Unreadable Gemini credentials"
+            case .malformed: return "Unreadable Antigravity credentials"
             case .failed(let status, let message):
                 return message.isEmpty
                     ? "Keychain read failed (exit \(status))"
@@ -72,7 +72,7 @@ enum GeminiCredentials {
         }
     }
 
-    /// Where Gemini keeps its credentials for the current environment.
+    /// Where Antigravity keeps its credentials for the current environment.
     struct Location {
         let service: String
         let account: String
@@ -155,7 +155,7 @@ enum GeminiCredentials {
     }
 }
 
-extension GeminiCredentials.Location {
+extension AntigravityCredentials.Location {
     static func current() -> Self {
 
         let service = "gemini"
@@ -225,12 +225,12 @@ private enum SecurityCommand {
 
                     switch control.stopReason {
                     case .timedOut?:
-                        continuation.resume(throwing: GeminiCredentials.KeychainError.timedOut)
+                        continuation.resume(throwing: AntigravityCredentials.KeychainError.timedOut)
                     case .cancelled?:
                         continuation.resume(throwing: CancellationError())
                     case .outputTooLarge?:
                         continuation.resume(
-                            throwing: GeminiCredentials.KeychainError.malformed)
+                            throwing: AntigravityCredentials.KeychainError.malformed)
                     case nil:
                         continuation.resume(
                             returning: Result(

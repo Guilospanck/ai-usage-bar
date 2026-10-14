@@ -24,7 +24,7 @@ struct UsageResponse: Encodable {
     }
 }
 
-func parseGeminiUsage(from data: Data) throws -> UsageResponse {
+func parseAntigravityUsage(from data: Data) throws -> UsageResponse {
     let response = try JSONDecoder().decode(ModelsResponse.self, from: data)
 
     let models = response.models.map { key, model in
@@ -40,8 +40,8 @@ func parseGeminiUsage(from data: Data) throws -> UsageResponse {
     )
 }
 
-struct GeminiProvider: UsageProvider {
-    let kind: ProviderKind = .gemini
+struct AntigravityProvider: UsageProvider {
+    let kind: ProviderKind = .antigravity
 
     private let url = URL(
         string: "https://cloudcode-pa.googleapis.com/v1internal:fetchAvailableModels")!
@@ -49,7 +49,7 @@ struct GeminiProvider: UsageProvider {
     func fetch(previous: ProviderUsage?) async -> ProviderUsage {
         let now = Date()
         do {
-            let token = try await GeminiCredentials.load()
+            let token = try await AntigravityCredentials.load()
             let headers = [
                 "Authorization": "Bearer \(token.token.accessToken)",
                 "User-Agent": "antigravity",
@@ -57,9 +57,9 @@ struct GeminiProvider: UsageProvider {
             ]
 
             let data = try await HTTP.call(url, headers: headers, method: .POST)
-            let root = try parseGeminiUsage(from: data)
+            let root = try parseAntigravityUsage(from: data)
 
-            let gemini_3_8 = root.models.first(where: { $0.name == "gemini-3.8-lash-tiered" })
+            let gemini_3_8 = root.models.first(where: { $0.name == "gemini-3.8-flash-tiered" })
 
             if gemini_3_8 == nil {
                 throw UsageError.badResponse("no gemini 3.8")
