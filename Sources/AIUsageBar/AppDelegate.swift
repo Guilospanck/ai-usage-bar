@@ -132,7 +132,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if let plan = snap.planName, !plan.isEmpty {
             header += "  (\(plan))"
         }
-        menu.addItem(headerItem(header))
+        menu.addItem(headerItem(header, provider: snap.provider))
 
         if let err = snap.error {
             menu.addItem(disabledItem("  ⚠ \(err)"))
@@ -200,8 +200,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - Menu item factories
 
-    private func headerItem(_ title: String) -> NSMenuItem {
+    private func headerItem(_ title: String, provider: ProviderKind) -> NSMenuItem {
         let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
+        // Copy before templating: the cached menu-bar glyph must remain white.
+        if let icon = provider.iconImage(pointSize: 13).copy() as? NSImage {
+            icon.isTemplate = true
+            item.image = icon
+        }
         item.attributedTitle = NSAttributedString(
             string: title,
             attributes: [.font: NSFont.boldSystemFont(ofSize: 13)])
