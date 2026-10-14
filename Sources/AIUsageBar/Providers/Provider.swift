@@ -12,6 +12,16 @@ protocol UsageProvider: Sendable {
 
 /// Small shared helpers for the HTTP providers.
 enum HTTP {
+    enum HTTPMethod: String {
+        case GET
+        case POST
+        case PUT
+        case PATCH
+        case DELETE
+        case HEAD
+        case OPTIONS
+    }
+
     static let session: URLSession = {
         let cfg = URLSessionConfiguration.ephemeral
         cfg.timeoutIntervalForRequest = 15
@@ -20,26 +30,15 @@ enum HTTP {
     }()
 
     /// Perform a GET and return the raw body, mapping status codes to UsageError.
-    static func get(_ url: URL, headers: [String: String]) async throws -> Data {
+    static func call(
+        _ url: URL, headers: [String: String], method: HTTPMethod = .GET, body: Data? = nil
+    ) async throws
+        -> Data
+    {
         var req = URLRequest(url: url)
-        req.httpMethod = "GET"
-        for (k, v) in headers { req.setValue(v, forHTTPHeaderField: k) }
+        req.httpMethod = method.rawValue
+        req.httpBody = body
 
-        let (data, response) = try await session.data(for: req)
-        guard let http = response as? HTTPURLResponse else {
-            throw UsageError.badResponse("No HTTP response")
-        }
-        switch http.statusCode {
-        case 200...299: return data
-        case 401, 403: throw UsageError.unauthorized
-        case 429: throw UsageError.rateLimited
-        default: throw UsageError.http(http.statusCode)
-        }
-    }
-
-    static func post(_ url: URL, headers: [String: String]) async throws -> Data {
-        var req = URLRequest(url: url)
-        req.httpMethod = "POST"
         for (k, v) in headers { req.setValue(v, forHTTPHeaderField: k) }
 
         let (data, response) = try await session.data(for: req)

@@ -14,13 +14,13 @@ struct OpenAIProvider: UsageProvider {
             var headers = [
                 "Authorization": "Bearer \(token.accessToken)",
                 "User-Agent": "codex-cli",
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
             ]
             if let accountId = token.accountId {
                 headers["ChatGPT-Account-Id"] = accountId
             }
 
-            let data = try await HTTP.get(url, headers: headers)
+            let data = try await HTTP.call(url, headers: headers)
             guard let root = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
                 throw UsageError.badResponse("Unexpected response")
             }
@@ -68,8 +68,9 @@ struct OpenAIProvider: UsageProvider {
     /// Dollar figures (strings) are surfaced in the window's `detail` sub-line.
     private func spendWindow(_ root: [String: Any]) -> UsageWindow? {
         guard let spend = root["spend_control"] as? [String: Any],
-              let limit = spend["individual_limit"] as? [String: Any],
-              limit["used_percent"] != nil else {
+            let limit = spend["individual_limit"] as? [String: Any],
+            limit["used_percent"] != nil
+        else {
             return nil
         }
         var reset: Date?
@@ -84,8 +85,9 @@ struct OpenAIProvider: UsageProvider {
         let cap = doubleValue(limit["limit"])
         if cap > 0 { detail = "$\(Int(used.rounded())) of $\(Int(cap.rounded()))" }
 
-        return UsageWindow(usedPercent: doubleValue(limit["used_percent"]),
-                           resetsAt: reset,
-                           detail: detail)
+        return UsageWindow(
+            usedPercent: doubleValue(limit["used_percent"]),
+            resetsAt: reset,
+            detail: detail)
     }
 }

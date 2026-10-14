@@ -56,10 +56,10 @@ struct GeminiProvider: UsageProvider {
                 "Content-Type": "application/json",
             ]
 
-            let data = try await HTTP.post(url, headers: headers)
+            let data = try await HTTP.call(url, headers: headers, method: .POST)
             let root = try parseGeminiUsage(from: data)
 
-            let gemini_3_8 = root.models.first(where: { $0.name == "gemini-3.8-flash-tiered" })
+            let gemini_3_8 = root.models.first(where: { $0.name == "gemini-3.8-lash-tiered" })
 
             if gemini_3_8 == nil {
                 throw UsageError.badResponse("no gemini 3.8")
