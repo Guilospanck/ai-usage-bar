@@ -83,15 +83,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if snapshots.isEmpty {
             menu.addItem(disabledItem("Loading…"))
         } else {
-            // Pad labels to a width shared across every provider so the bars and
-            // percentages line up in one column throughout the whole menu.
-            let labelWidth =
-                snapshots
-                .flatMap { rows(for: $0) }
-                .map { $0.label.count }
-                .max() ?? 0
             for snap in snapshots {
-                addProviderSection(snap, labelWidth: labelWidth, to: menu)
+                addProviderSection(snap, to: menu)
                 menu.addItem(.separator())
             }
         }
@@ -126,7 +119,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         label: String, window: UsageWindow, metric: TitleMetric
     )] {
         var rows: [(label: String, window: UsageWindow, metric: TitleMetric)] = []
-        if let w = snap.fiveHour { rows.append(("5-hour", w, .fiveHour)) }
+        if let w = snap.fiveHour { rows.append(("Session (5h)", w, .fiveHour)) }
         if let w = snap.weekly { rows.append(("Weekly", w, .weekly)) }
         for named in snap.scoped {
             rows.append((named.label, named.window, .scoped(named.label)))
@@ -134,7 +127,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         return rows
     }
 
-    private func addProviderSection(_ snap: ProviderUsage, labelWidth: Int, to menu: NSMenu) {
+    private func addProviderSection(_ snap: ProviderUsage, to menu: NSMenu) {
         var header = snap.provider.rawValue
         if let plan = snap.planName, !plan.isEmpty {
             header += "  (\(plan))"
@@ -170,61 +163,39 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         for row in sectionRows {
             addWindowItem(
-                row, provider: snap.provider, labelWidth: labelWidth,
+                row, snapshot: snap,
                 selected: row.metric == displayed, to: menu)
         }
     }
 
     private func addWindowItem(
         _ row: (label: String, window: UsageWindow, metric: TitleMetric),
-        provider: ProviderKind, labelWidth: Int, selected: Bool, to menu: NSMenu
+        snapshot: ProviderUsage, selected: Bool, to menu: NSMenu
     ) {
         let window = row.window
-        let paddedLabel = row.label.padding(toLength: labelWidth, withPad: " ", startingAt: 0)
-        let pct = String(format: "%3d%%", Int(window.usedPercent.rounded()))
-        let line = "\(paddedLabel)   \(Format.bar(window.usedPercent))   \(pct)"
-
-        // Clickable: selects this window as this provider's menu-bar metric (click
-        // again to return to auto/highest). The active/binding window is orange.
-        let item = NSMenuItem(title: line, action: #selector(selectRow(_:)), keyEquivalent: "")
-        item.target = self
-        item.representedObject = RowSelection(provider: provider, metric: row.metric)
-        item.state = selected ? .on : .off
-        item.isEnabled = true
-        var attrs: [NSAttributedString.Key: Any] = [
-            .font: NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
-        ]
-        if window.isActive { attrs[.foregroundColor] = NSColor.systemOrange }
-        item.attributedTitle = NSAttributedString(string: line, attributes: attrs)
-        menu.addItem(item)
-
         var parts: [String] = []
-        if provider == .claude, row.metric == .fiveHour {
-            parts.append(Format.resetAt(window.resetsAt) ?? "resets at: not reported")
+        if snapshot.provider == .claude, row.metric == .fiveHour, window.resetsAt == nil {
+            if let weekly = snapshot.weekly, weekly.usedPercent >= 100, weekly.isActive {
+                // This is the blocking weekly reset, not an invented session reset.
+                parts.append("Paused until your week resets")
+                if let countdown = Format.resetCountdown(weekly.resetsAt) {
+                    parts.append(countdown)
+                }
+            } else {
+                parts.append("Session reset not reported")
+            }
+        } else if let countdown = Format.resetCountdown(window.resetsAt) {
+            parts.append(countdown)
         }
-        if let sub = Format.resetCountdown(window.resetsAt) { parts.append(sub) }
         if let detail = window.detail { parts.append(detail) }
-        if !parts.isEmpty {
-            let subtitle = parts.joined(separator: " · ")
-            let subitem = disabledItem(subtitle, small: true)
-            // Use the usage row's measured label column, not spaces in a smaller
-            // proportional font. All providers' subtitles start under the bars.
-            let prefix = String(repeating: " ", count: labelWidth + 3)
-            let indent = (prefix as NSString).size(withAttributes: [
-                .font: NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
-            ]).width
-            let paragraph = NSMutableParagraphStyle()
-            paragraph.firstLineHeadIndent = indent
-            paragraph.headIndent = indent
-            subitem.attributedTitle = NSAttributedString(
-                string: subtitle,
-                attributes: [
-                    .font: NSFont.systemFont(ofSize: 11),
-                    .foregroundColor: NSColor.secondaryLabelColor,
-                    .paragraphStyle: paragraph,
-                ])
-            menu.addItem(subitem)
-        }
+        let item = NSMenuItem(title: row.label, action: #selector(selectRow(_:)), keyEquivalent: "")
+        item.target = self
+        item.representedObject = RowSelection(provider: snapshot.provider, metric: row.metric)
+        item.isEnabled = true
+        item.view = QuotaMenuItemView(
+            item: item, label: row.label, window: window,
+            subtitle: parts.isEmpty ? nil : parts.joined(separator: " · "), selected: selected)
+        menu.addItem(item)
     }
 
     // MARK: - Menu item factories
