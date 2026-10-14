@@ -102,20 +102,12 @@ struct AIUsageBarApp {
             } catch { print("  creds error: \(error.localizedDescription)") }
 
             // Antigravity
-            print(
-                "\n══ Antigravity: cloudcode-pa.googleapis.com/v1internal:fetchAvailableModels ══")
+            print("\n══ Antigravity: agy /usage ══")
             do {
-                let t = try await AntigravityCredentials.load()
-                print(t)
-                let headers = [
-                    "Authorization": "Bearer \(t.token.accessToken)",
-                    "User-Agent": "antigravity",
-                    "Content-Type": "application/json",
-                ]
-                await rawDump(
-                    "https://cloudcode-pa.googleapis.com/v1internal:fetchAvailableModels",
-                    headers: headers, method: "POST")
-            } catch { print("  creds error: \(error.localizedDescription)") }
+                let data = try await AntigravityUsageCommand.run()
+                let body = String(decoding: data, as: UTF8.self)
+                print(body.count > 6000 ? String(body.prefix(6000)) + "…(truncated)" : body)
+            } catch { print("  usage error: \(error.localizedDescription)") }
 
             sema.signal()
         }

@@ -1,92 +1,66 @@
 import Foundation
 
-struct ModelsResponse: Decodable {
-    let models: [String: Model]
-
-    struct Model: Decodable {
-        let displayName: String?
-        let quotaInfo: QuotaInfo?
+/// Parses the CLI's structured command report, never its human-readable response.
+func parseAntigravityUsage(from data: Data) throws -> [NamedWindow] {
+    struct Report: Decodable {
+        let status: String
+        let command: Command?
+        struct Command: Decodable {
+            let name: String
+            let data: QuotaData?
+        }
+        struct QuotaData: Decodable { let groups: [Group] }
+        struct Group: Decodable {
+            let name: String
+            let buckets: [Bucket]
+        }
+        struct Bucket: Decodable {
+            let name: String
+            let window: String
+            let remaining_fraction: Double?
+            let reset_time: String?
+        }
     }
-
-    struct QuotaInfo: Decodable {
-        let remainingFraction: Double?
-        let resetTime: String?
+    let report = try JSONDecoder().decode(Report.self, from: data)
+    guard report.status == "SUCCESS", let command = report.command,
+        command.name == "usage", let quota = command.data else {
+        throw UsageError.badResponse("agy did not return a successful usage report; run `agy` to check sign-in")
     }
-}
-
-struct UsageResponse: Encodable {
-    let models: [ModelUsage]
-
-    struct ModelUsage: Encodable {
-        let name: String
-        let remainingPercent: Double?
-        let resetTime: String?
+    let windows = quota.groups.flatMap { group in
+        group.buckets.compactMap { bucket -> NamedWindow? in
+            guard let remaining = bucket.remaining_fraction, remaining.isFinite,
+                (0...1).contains(remaining) else { return nil }
+            let period: String
+            switch bucket.window {
+            case "weekly": period = "Weekly"
+            case "five_hour", "five-hour", "fiveHour", "session": period = "5-hour"
+            default: period = bucket.name
+            }
+            return NamedWindow(
+                label: "\(group.name) · \(period)",
+                window: UsageWindow(
+                    usedPercent: (1 - remaining) * 100,
+                    resetsAt: parseISO8601(bucket.reset_time)))
+        }
     }
-}
-
-func parseAntigravityUsage(from data: Data) throws -> UsageResponse {
-    let response = try JSONDecoder().decode(ModelsResponse.self, from: data)
-
-    let models = response.models.map { key, model in
-        UsageResponse.ModelUsage(
-            name: model.displayName ?? key,
-            remainingPercent: model.quotaInfo?.remainingFraction.map { $0 * 100 },
-            resetTime: model.quotaInfo?.resetTime
-        )
+    guard !windows.isEmpty else {
+        throw UsageError.badResponse("No measured quota groups in agy usage report")
     }
-
-    return UsageResponse(
-        models: models.sorted { $0.name < $1.name }
-    )
+    return windows
 }
 
 struct AntigravityProvider: UsageProvider {
     let kind: ProviderKind = .antigravity
 
-    private let url = URL(
-        string: "https://cloudcode-pa.googleapis.com/v1internal:fetchAvailableModels")!
-
     func fetch(previous: ProviderUsage?) async -> ProviderUsage {
         let now = Date()
         do {
-            let token = try await AntigravityCredentials.load()
-            let headers = [
-                "Authorization": "Bearer \(token.token.accessToken)",
-                "User-Agent": "antigravity",
-                "Content-Type": "application/json",
-            ]
-
-            let data = try await HTTP.call(url, headers: headers, method: .POST)
-            let root = try parseAntigravityUsage(from: data)
-
-            let gemini_3_8 = root.models.first(where: { $0.name == "gemini-3.8-flash-tiered" })
-
-            if gemini_3_8 == nil {
-                throw UsageError.badResponse("no gemini 3.8")
-            }
-
-            func window(_ obj: UsageResponse.ModelUsage) -> UsageWindow {
-                let resetsAt = ISO8601DateFormatter().date(from: obj.resetTime!)
-                let usedPercent = obj.remainingPercent!
-
-                return UsageWindow(usedPercent: usedPercent, resetsAt: resetsAt)
-            }
-
-            var scoped: [NamedWindow] = []
-            let monthly: NamedWindow = NamedWindow(label: "Monthly", window: window(gemini_3_8!))
-            scoped.append(monthly)
-
+            let data = try await AntigravityUsageCommand.run()
             return ProviderUsage(
-                provider: kind,
-                planName: "Subscription",
-                fiveHour: nil,
-                weekly: nil,
-                scoped: scoped,
-                error: nil,
-                fetchedAt: now
-            )
-        } catch let e as UsageError {
-            return .failure(kind, error: e.errorDescription ?? "Error", keeping: previous, at: now)
+                provider: kind, planName: "Shared group quotas",
+                fiveHour: nil, weekly: nil,
+                scoped: try parseAntigravityUsage(from: data),
+                error: nil, fetchedAt: now)
         } catch {
             return .failure(kind, error: error.localizedDescription, keeping: previous, at: now)
         }

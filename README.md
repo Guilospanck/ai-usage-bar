@@ -142,6 +142,28 @@ window across everything. Click any usage row in the dropdown to pin that window
 click the pinned row again to go back to auto. The choice is saved. When a provider lacks
 the pinned window (OpenAI has no "Fable" cap), it falls back to that provider's highest.
 
+### Antigravity
+
+Install `agy` and run it once to sign in. The app runs
+`agy -p /usage --output-format json` on each poll and reads its structured quota
+report. This is a built-in usage command, not a model prompt. Tested with `agy`
+1.3.5; older versions without structured `/usage` reports must be updated.
+
+The rows show **shared quota groups** (Gemini and Claude/GPT), with weekly and
+session limits when reported. They are not summed into a fictitious account-wide
+percentage. Remaining fractions are converted to percent used.
+
+`agy` owns authentication and token refresh: no OAuth client configuration file
+or manual hourly launch is required while silent refresh succeeds. When sign-in
+is needed again, run `agy` in a terminal. Automatic probes block browser launch
+via PATH/BROWSER shims, use a private temporary working directory, cap output at
+1 MiB per stream, and time out after 75 seconds. Last-good values are retained
+on failures. CLI startup may load its configured plugins/MCP servers.
+
+The app finds `agy` on PATH, in `~/.local/bin`, `~/.antigravity/bin`, or standard
+Homebrew locations. Terminal launches can set `ANTIGRAVITY_CLI_PATH` to an
+absolute executable path. Finder/login launches do not inherit shell variables.
+
 ## Troubleshooting
 
 - **Keychain prompt naming `security` for "Claude Code-credentials" — click
@@ -178,7 +200,7 @@ the pinned window (OpenAI has no "Fable" cap), it falls back to that provider's 
   monthly **Spend** cap (shown as a "Spend" row with `$used of $limit`). If OpenAI
   shows "No data", run `just dump` and check which shape your account returns.
 - **"Re-auth needed" (401)** — the stored token expired; open the relevant CLI to
-  refresh it. (Automatic OAuth refresh isn't implemented in v1.)
+  refresh it. Antigravity delegates silent refresh to `agy`.
 - **"Rate limited" (429)** — the usage endpoints throttle aggressive polling;
   the app keeps the last-good values. Leave the interval at 120s or higher.
 - **Launch at Login item missing/ineffective** — this needs the bundled, signed
