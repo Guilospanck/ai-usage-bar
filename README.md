@@ -1,26 +1,26 @@
 # AI Usage Bar
 
 A native macOS menu-bar app that shows your **current subscription usage** for
-**Claude** (Pro/Max) and **OpenAI/ChatGPT** (Plus/Pro) side by side — the same
-rolling-window percentages you'd see in Claude Code's `/usage` and Codex CLI's
-`/status`, always visible in the menu bar.
+**Claude**, **OpenAI/ChatGPT**, and **Antigravity** side by side — usage windows
+from Claude Code and Codex, plus shared quota groups from Antigravity's `agy` CLI,
+always visible in the menu bar.
 
-A compact title sits in the menu bar —
+- Track only the providers you use, and choose which appear in the menu bar.
+- Pin a usage window independently for each provider.
+- Collapse provider sections to keep the dropdown compact.
+- Refresh automatically every **120 seconds**, with last-good values retained on errors.
+
+A compact title shows each provider's usage in the menu bar. Click it to open
+the full breakdown with usage bars and reset countdowns:
 
 <div align="center" style="text-align:center">
-  <img src="docs/menubar.png" alt="Menu-bar title showing the Claude logo with 21% and the OpenAI logo with 2%" height="22">
+  <img src="docs/image.png" alt="Menu bar and expanded dropdown showing Claude session and weekly usage, OpenAI monthly spend, and Antigravity shared weekly quotas for Gemini and Claude/GPT models" width="394">
 </div>
 
-— and clicking it drops down the full per-window breakdown for both providers:
-
-<div align="center" style="text-align:center">
-  <img src="docs/dropdown.png" alt="Dropdown showing Claude (max) 5-hour, Weekly and Weekly · Fable windows, and OpenAI (business) monthly Spend, each with a bar, percentage and reset countdown" width="360">
-</div>
-
-<sub>`✓` marks the window shown in the menu-bar title (per provider) · <b>orange</b> marks the
-window currently binding your usage (the API's <code>is_active</code> flag) ·
-OpenAI here is a <b>business</b> plan, so it shows a monthly <b>Spend</b> cap
-(<code>$74 of $3500</code>) instead of Plus/Pro's rolling 5-hour + Weekly windows.</sub>
+The screenshot shows **Claude Max**, **OpenAI Business**, and **Antigravity**.
+OpenAI Business shows a monthly **Spend** cap instead of Plus/Pro's rolling
+5-hour + Weekly windows; Antigravity shows shared quota groups for Gemini and
+Claude/GPT models.
 
 Each usage row is clickable: click one to pin it as that provider's menu-bar
 percentage; click it again to revert to auto (highest window). A `✓` always
@@ -29,6 +29,9 @@ auto-selected one when unpinned — and each provider's selection is independent
 The window currently binding your usage (the API's `is_active` flag) is drawn in
 **orange**.
 
+Click a provider's header to collapse or expand its details. Sections start
+expanded and remember your choice; collapsing does not stop refreshes or change
+the menu-bar percentage.
 
 ## Install
 
@@ -51,17 +54,25 @@ brew upgrade --cask ai-usage-bar
 brew uninstall --cask ai-usage-bar        # turn off Launch at Login first
 ```
 
+### Provider setup
+
+Requires **macOS 13 or later**. Sign in with the CLI for each provider you want
+to track (this applies to both Homebrew and source installs):
+
+- **Claude:** run `claude auth login` (Pro/Max).
+- **OpenAI/ChatGPT:** run `codex` and authenticate (Plus/Pro/Business).
+- **Antigravity:** install `agy` **1.3.5 or later** and run it once to sign in.
+
+All providers are tracked by default. Turn off unused providers in **Track
+Providers** to avoid checking their credentials or running their CLI.
+
 ### Build from source
 
-Requirements
+Additional requirements:
 
-- **macOS 13 or later**
 - A **Swift toolchain** — Xcode 15+ or the standalone toolchain (`swift --version`).
   If missing: `xcode-select --install`. *(Only needed to build from source — the
   Homebrew cask ships a prebuilt binary.)*
-- Signed in at least once with the CLIs so the OAuth tokens exist:
-  - `claude` — authenticate (Claude Pro/Max)
-  - `codex` — authenticate (ChatGPT Plus/Pro/Business)
 - Optional: [`just`](https://github.com/casey/just) for the task recipes — `brew install just`
 
 From the repository root (the folder containing `Package.swift`):
@@ -108,23 +119,28 @@ Verify credentials + endpoints straight from the terminal:
 
 ```bash
 just probe            # or: swift run AIUsageBar --probe
-just dump             # raw HTTP status + response body, for debugging shapes
+just dump             # raw HTTP responses / agy quota report, for debugging
 ```
 
 `probe` prints each provider's plan, windows, and reset countdowns — the fastest
-way to confirm the token/endpoint plumbing works before worrying about the UI.
+way to confirm credentials and usage fetching work before worrying about the UI.
+Both commands respect **Track Providers** settings. `dump` output may include
+personal information (email or account IDs); redact it before sharing.
 
 ## How it works
 
-No API keys required — it reuses the OAuth tokens the official CLIs already store,
-and calls the same undocumented usage endpoints they use:
+No API keys required. For Claude and OpenAI, it reuses the OAuth tokens the
+official CLIs already store and calls their undocumented usage endpoints.
+For Antigravity, it delegates usage fetching and authentication to `agy`:
 
 | Provider | Endpoint | Token source |
 |----------|----------|--------------|
 | Claude   | `GET api.anthropic.com/api/oauth/usage` | Keychain `Claude Code-credentials` for account `$USER` (read via `/usr/bin/security`), fallback `~/.claude/.credentials.json` |
 | OpenAI   | `GET chatgpt.com/backend-api/wham/usage` | `~/.codex/auth.json` |
+| Antigravity | `agy -p /usage --output-format json` | Managed by `agy` |
 
-It re-reads the tokens on every poll, so it rides on the CLIs keeping them fresh.
+It re-reads Claude and OpenAI tokens on every poll, relying on their CLIs to keep
+them fresh.
 Claude credentials are located the way Claude Code does it: with `CLAUDE_CONFIG_DIR`
 set, the Keychain item gets a hash suffix and the file lives in that directory.
 Apps launched from Finder or at login don't see shell variables, so only the default
@@ -146,13 +162,15 @@ selected, the **AI** title keeps the menu accessible.
 
 **Choosing menu-bar visibility:** open **Show in Menu Bar** in the dropdown to toggle Claude,
 OpenAI, and Antigravity independently. All are shown by default and choices are
-saved. Hidden providers still refresh and remain in the dropdown. Hiding all
-providers leaves an **AI** title so the menu stays accessible.
+saved. Hidden providers still refresh and remain in the dropdown. Untracked
+providers cannot be toggled here; re-enable them in **Track Providers** first.
+Hiding all providers leaves an **AI** title so the menu stays accessible.
 
 **Choosing what the menu-bar shows:** the compact percentage defaults to the *highest*
-window across everything. Click any usage row in the dropdown to pin that window instead;
-click the pinned row again to go back to auto. The choice is saved. When a provider lacks
-the pinned window (OpenAI has no "Fable" cap), it falls back to that provider's highest.
+window for each provider. Click any usage row in the dropdown to pin that window instead;
+click the pinned row again to go back to auto. Each provider's choice is saved
+independently. If a pinned window disappears from that provider's report, the
+menu-bar percentage falls back to its highest available window.
 
 ### Antigravity
 
@@ -207,6 +225,12 @@ absolute executable path. Finder/login launches do not inherit shell variables.
   custom `CLAUDE_CONFIG_DIR`, see *How it works* above.
 - **OpenAI shows "Not signed in"** — run `codex` once and authenticate so
   `~/.codex/auth.json` exists.
+- **Antigravity cannot find `agy` or needs sign-in** — install/update `agy`, then
+  run it in a terminal to authenticate. For a nonstandard install location, see
+  `ANTIGRAVITY_CLI_PATH` above.
+- **Provider missing from the dropdown** — enable it in **Track Providers**.
+  If only its details are missing, click the provider header to expand it.
+- **Provider missing only from the menu bar** — enable it in **Show in Menu Bar**.
 - **OpenAI plan shape** — Plus/Pro report rolling **5-hour + Weekly** windows;
   **Business/enterprise** plans return `rate_limit: null` and instead expose a
   monthly **Spend** cap (shown as a "Spend" row with `$used of $limit`). If OpenAI
@@ -227,9 +251,13 @@ build.sh                          build + bundle + ad-hoc sign
 Resources/AppIcon.icns            app icon (regenerate: `just icon`)
 scripts/make-icon.swift           draws the icon + writes the .icns
 Sources/AIUsageBar/
-  main.swift                      entry point (+ --probe mode)
+  App.swift                       entry point (+ --probe / --dump modes)
   AppDelegate.swift               NSStatusItem, menu, rendering
   UsageStore.swift                provider registry + polling loop
+  Settings.swift                  saved tracking, visibility, pins, collapse state
+  ProviderIcon.swift              provider logos
+  ProviderHeaderView.swift        clickable, collapsible section headers
+  QuotaMenuItemView.swift          usage bars + clickable window rows
   Formatting.swift                title / bar / countdown helpers
   Models.swift                    UsageWindow, ProviderUsage, errors
   LoginItem.swift                 SMAppService launch-at-login
@@ -237,6 +265,8 @@ Sources/AIUsageBar/
     Provider.swift                protocol + shared HTTP helpers
     AnthropicProvider.swift       Claude usage fetch + parse
     OpenAIProvider.swift          OpenAI usage fetch + parse
+    AntigravityProvider.swift     structured quota report parser
+    AntigravityUsageCommand.swift bounded agy subprocess + executable discovery
   Credentials/
     ClaudeCredentials.swift       Keychain + file token reader
     CodexCredentials.swift        auth.json (+ JWT account-id) reader
@@ -245,6 +275,9 @@ Sources/AIUsageBar/
 ## Extending
 
 Adding a provider is: implement `UsageProvider`, return a `ProviderUsage`, and add
-it to the array in `AppDelegate`'s `UsageStore(...)` init. A future **API/$-spend
+a case to `ProviderKind`, supply its icon in `ProviderIcon.swift`, and register
+it in `AppDelegate`'s `UsageStore(...)` init and `App.swift`'s headless modes.
+Tracking and visibility menus are generated from `ProviderKind.allCases`.
+A future **API/$-spend
 mode** (Anthropic Admin key, OpenAI usage API) would slot in as additional
 providers alongside the subscription ones.
