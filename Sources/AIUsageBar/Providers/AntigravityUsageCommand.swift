@@ -28,6 +28,7 @@ enum AntigravityUsageCommand {
     }
 
     static func run() async throws -> Data {
+        try Task.checkCancellation()
         let executable = try executable()
         let fm = FileManager.default
         let directory = fm.temporaryDirectory.appendingPathComponent(

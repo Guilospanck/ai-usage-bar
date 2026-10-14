@@ -10,6 +10,7 @@ let package = Package(
         .executableTarget(
             name: "AIUsageBar",
             path: "Sources/AIUsageBar"
-        )
+        ),
+        .testTarget(name: "AIUsageBarTests", dependencies: ["AIUsageBar"])
     ]
 )

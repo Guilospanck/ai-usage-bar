@@ -59,7 +59,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             .font: font, .foregroundColor: NSColor.labelColor,
         ]
         guard !pieces.isEmpty else {
-            return NSAttributedString(string: snapshots.isEmpty ? "AI …" : "AI", attributes: textAttrs)
+            return NSAttributedString(string: snapshots.isEmpty && store.hasTrackedProviders ? "AI …" : "AI", attributes: textAttrs)
         }
         let result = NSMutableAttributedString()
         for (index, piece) in pieces.enumerated() {
@@ -84,7 +84,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.autoenablesItems = false  // we manage enabled state explicitly
 
         if snapshots.isEmpty {
-            menu.addItem(disabledItem("Loading…"))
+            menu.addItem(disabledItem(store.hasTrackedProviders ? "Loading…" : "No providers tracked"))
         } else {
             for snap in snapshots {
                 addProviderSection(snap, to: menu)
@@ -96,8 +96,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             title: store.isRefreshing ? "Refreshing…" : "Refresh Now",
             action: #selector(refreshNow), keyEquivalent: "r")
         refresh.target = self
-        refresh.isEnabled = !store.isRefreshing
+        refresh.isEnabled = !store.isRefreshing && store.hasTrackedProviders
         menu.addItem(refresh)
+
+        let trackingItem = NSMenuItem(title: "Track Providers", action: nil, keyEquivalent: "")
+        let trackingMenu = NSMenu(title: "Track Providers")
+        trackingMenu.autoenablesItems = false
+        for provider in ProviderKind.allCases {
+            let item = NSMenuItem(
+                title: provider.rawValue, action: #selector(toggleProviderTracking(_:)), keyEquivalent: "")
+            item.target = self
+            item.representedObject = provider
+            item.state = Settings.isTracked(provider) ? .on : .off
+            trackingMenu.addItem(item)
+        }
+        trackingItem.submenu = trackingMenu
+        menu.addItem(trackingItem)
 
         let visibilityItem = NSMenuItem(title: "Show in Menu Bar", action: nil, keyEquivalent: "")
         let visibilityMenu = NSMenu(title: "Show in Menu Bar")
@@ -108,6 +122,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             item.target = self
             item.representedObject = provider
             item.state = Settings.isShownInMenuBar(provider) ? .on : .off
+            item.isEnabled = Settings.isTracked(provider)
             visibilityMenu.addItem(item)
         }
         visibilityItem.submenu = visibilityMenu
@@ -150,6 +165,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             header += "  (\(plan))"
         }
         menu.addItem(headerItem(header, provider: snap.provider))
+        let firstDetailIndex = menu.numberOfItems
+        defer {
+            for index in firstDetailIndex..<menu.numberOfItems {
+                menu.item(at: index)?.isHidden = Settings.isSectionCollapsed(snap.provider)
+            }
+        }
 
         if let err = snap.error {
             menu.addItem(disabledItem("  ⚠ \(err)"))
@@ -218,16 +239,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Menu item factories
 
     private func headerItem(_ title: String, provider: ProviderKind) -> NSMenuItem {
-        let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
-        // Copy before templating: the cached menu-bar glyph must remain white.
-        if let icon = provider.iconImage(pointSize: 13).copy() as? NSImage {
-            icon.isTemplate = true
-            item.image = icon
-        }
-        item.attributedTitle = NSAttributedString(
-            string: title,
-            attributes: [.font: NSFont.boldSystemFont(ofSize: 13)])
-        item.isEnabled = false
+        let item = NSMenuItem(title: title, action: #selector(toggleSection(_:)), keyEquivalent: "")
+        item.target = self
+        item.representedObject = provider
+        item.view = ProviderHeaderView(
+            item: item, title: title, provider: provider,
+            collapsed: Settings.isSectionCollapsed(provider))
         return item
     }
 
@@ -260,6 +277,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let next: TitleMetric = (current == selection.metric) ? .worst : selection.metric
         Settings.setTitleMetric(next, for: selection.provider)
         render()
+    }
+
+    @objc private func toggleSection(_ sender: NSMenuItem) {
+        guard let provider = sender.representedObject as? ProviderKind,
+              let menu = sender.menu else { return }
+        let collapsed = !Settings.isSectionCollapsed(provider)
+        Settings.setSectionCollapsed(collapsed, for: provider)
+        (sender.view as? ProviderHeaderView)?.collapsed = collapsed
+        let firstDetailIndex = menu.index(of: sender) + 1
+        for index in firstDetailIndex..<menu.numberOfItems {
+            guard let item = menu.item(at: index), !item.isSeparatorItem else { break }
+            item.isHidden = collapsed
+        }
+    }
+
+    @objc private func toggleProviderTracking(_ sender: NSMenuItem) {
+        guard let provider = sender.representedObject as? ProviderKind else { return }
+        store.setTracked(!Settings.isTracked(provider), for: provider)
     }
 
     @objc private func toggleProviderVisibility(_ sender: NSMenuItem) {

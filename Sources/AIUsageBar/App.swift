@@ -38,7 +38,7 @@ struct AIUsageBarApp {
         // Detached so the fetches run off the main actor — we block the main
         // thread on `sema.wait()` below, so a main-actor Task would deadlock.
         Task.detached {
-            for p in providers {
+            for p in providers where Settings.isTracked(p.kind) {
                 let u = await p.fetch(previous: nil)
                 print("── \(u.provider.rawValue) ─────────────────────────")
                 if let plan = u.planName { print("  plan:   \(plan)") }
@@ -74,40 +74,46 @@ struct AIUsageBarApp {
             print("  (email, account/user id). Redact before sharing publicly.\n")
 
             // Claude
-            print("══ Claude: api.anthropic.com/api/oauth/usage ══")
-            do {
-                let t = try await ClaudeCredentials.load()
-                await rawDump(
-                    "https://api.anthropic.com/api/oauth/usage",
-                    headers: [
-                        "Authorization": "Bearer \(t.accessToken)",
-                        "anthropic-beta": "oauth-2025-04-20",
-                        "User-Agent": "claude-code/2.1.183",
-                        "Content-Type": "application/json",
-                    ])
-            } catch { print("  creds error: \(error.localizedDescription)") }
+            if Settings.isTracked(.claude) {
+                print("══ Claude: api.anthropic.com/api/oauth/usage ══")
+                do {
+                    let t = try await ClaudeCredentials.load()
+                    await rawDump(
+                        "https://api.anthropic.com/api/oauth/usage",
+                        headers: [
+                            "Authorization": "Bearer \(t.accessToken)",
+                            "anthropic-beta": "oauth-2025-04-20",
+                            "User-Agent": "claude-code/2.1.183",
+                            "Content-Type": "application/json",
+                        ])
+                } catch { print("  creds error: \(error.localizedDescription)") }
+            }
 
             // OpenAI / Codex
-            print("\n══ OpenAI: chatgpt.com/backend-api/wham/usage ══")
-            do {
-                let t = try CodexCredentials.load()
-                print("  account_id: \(t.accountId ?? "‹none — header omitted›")")
-                var headers = [
-                    "Authorization": "Bearer \(t.accessToken)",
-                    "User-Agent": "codex-cli",
-                    "Content-Type": "application/json",
-                ]
-                if let id = t.accountId { headers["ChatGPT-Account-Id"] = id }
-                await rawDump("https://chatgpt.com/backend-api/wham/usage", headers: headers)
-            } catch { print("  creds error: \(error.localizedDescription)") }
+            if Settings.isTracked(.openai) {
+                print("\n══ OpenAI: chatgpt.com/backend-api/wham/usage ══")
+                do {
+                    let t = try CodexCredentials.load()
+                    print("  account_id: \(t.accountId ?? "‹none — header omitted›")")
+                    var headers = [
+                        "Authorization": "Bearer \(t.accessToken)",
+                        "User-Agent": "codex-cli",
+                        "Content-Type": "application/json",
+                    ]
+                    if let id = t.accountId { headers["ChatGPT-Account-Id"] = id }
+                    await rawDump("https://chatgpt.com/backend-api/wham/usage", headers: headers)
+                } catch { print("  creds error: \(error.localizedDescription)") }
+            }
 
             // Antigravity
-            print("\n══ Antigravity: agy /usage ══")
-            do {
-                let data = try await AntigravityUsageCommand.run()
-                let body = String(decoding: data, as: UTF8.self)
-                print(body.count > 6000 ? String(body.prefix(6000)) + "…(truncated)" : body)
-            } catch { print("  usage error: \(error.localizedDescription)") }
+            if Settings.isTracked(.antigravity) {
+                print("\n══ Antigravity: agy /usage ══")
+                do {
+                    let data = try await AntigravityUsageCommand.run()
+                    let body = String(decoding: data, as: UTF8.self)
+                    print(body.count > 6000 ? String(body.prefix(6000)) + "…(truncated)" : body)
+                } catch { print("  usage error: \(error.localizedDescription)") }
+            }
 
             sema.signal()
         }

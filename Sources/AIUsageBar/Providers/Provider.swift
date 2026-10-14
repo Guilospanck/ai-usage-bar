@@ -35,6 +35,7 @@ enum HTTP {
     ) async throws
         -> Data
     {
+        try Task.checkCancellation()
         var req = URLRequest(url: url)
         req.httpMethod = method.rawValue
         req.httpBody = body

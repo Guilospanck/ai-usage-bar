@@ -35,6 +35,26 @@ enum TitleMetric: Equatable {
 }
 
 enum Settings {
+    /// Tracking controls all provider activity, independently of title visibility.
+    static func isTracked(_ provider: ProviderKind) -> Bool {
+        let key = "providerTracked.\(provider.rawValue)"
+        guard UserDefaults.standard.object(forKey: key) != nil else { return true }
+        return UserDefaults.standard.bool(forKey: key)
+    }
+
+    static func setTracked(_ tracked: Bool, for provider: ProviderKind) {
+        UserDefaults.standard.set(tracked, forKey: "providerTracked.\(provider.rawValue)")
+    }
+
+    /// Sections start expanded and remember explicit collapse choices.
+    static func isSectionCollapsed(_ provider: ProviderKind) -> Bool {
+        UserDefaults.standard.bool(forKey: "sectionCollapsed.\(provider.rawValue)")
+    }
+
+    static func setSectionCollapsed(_ collapsed: Bool, for provider: ProviderKind) {
+        UserDefaults.standard.set(collapsed, forKey: "sectionCollapsed.\(provider.rawValue)")
+    }
+
     /// Visibility only affects the compact title, not fetching or the dropdown.
     static func isShownInMenuBar(_ provider: ProviderKind) -> Bool {
         let key = "menuBarVisible.\(provider.rawValue)"

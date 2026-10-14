@@ -137,7 +137,14 @@ exposes the 5-hour session window, the all-model weekly cap, **and per-model wee
 caps** (e.g. **Fable**) via each entry's `scope.model.display_name`. Any additional
 model-scoped caps your plan has appear automatically — nothing is hard-coded to Fable.
 
-**Choosing providers:** open **Show in Menu Bar** in the dropdown to toggle Claude,
+**Tracking providers:** open **Track Providers** to choose which providers the app
+checks. All are tracked by default and choices are saved. Unchecked providers
+are removed from the dropdown and title, their active checks are cancelled, and
+neither automatic nor manual refresh accesses them. Re-enabling a provider checks
+it immediately. `--probe` and `--dump` also respect these choices. With none
+selected, the **AI** title keeps the menu accessible.
+
+**Choosing menu-bar visibility:** open **Show in Menu Bar** in the dropdown to toggle Claude,
 OpenAI, and Antigravity independently. All are shown by default and choices are
 saved. Hidden providers still refresh and remain in the dropdown. Hiding all
 providers leaves an **AI** title so the menu stays accessible.

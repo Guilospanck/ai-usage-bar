@@ -76,6 +76,7 @@ enum ClaudeCredentials {
     private static let maxOutputBytes = 1 << 20
 
     static func load() async throws -> Token {
+        try Task.checkCancellation()
         let location = Location.current()
 
         var keychainError: Error?
@@ -91,6 +92,7 @@ enum ClaudeCredentials {
             keychainError = error
         }
 
+        try Task.checkCancellation()
         if let data = FileManager.default.contents(atPath: location.filePath),
            let token = parse(data) {
             return token
