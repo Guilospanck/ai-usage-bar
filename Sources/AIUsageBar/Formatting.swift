@@ -55,7 +55,7 @@ enum Format {
     static func menuBarPieces(_ snapshots: [ProviderUsage]) -> [(
         provider: ProviderKind, text: String
     )] {
-        snapshots.map { snap in
+        snapshots.filter { Settings.isShownInMenuBar($0.provider) }.map { snap in
             let metric = Settings.titleMetric(for: snap.provider)
             let w = window(for: metric, in: snap) ?? window(for: .worst, in: snap)
             let text = w.map { percent($0.usedPercent) } ?? "—"
@@ -67,8 +67,9 @@ enum Format {
     /// fallback (loading state, `--probe`); the live menu bar renders icons.
     static func menuBarTitle(_ snapshots: [ProviderUsage]) -> String {
         guard !snapshots.isEmpty else { return "AI …" }
-        return menuBarPieces(snapshots)
-            .map { "\($0.provider.shortSymbol) \($0.text)" }
+        let pieces = menuBarPieces(snapshots)
+        guard !pieces.isEmpty else { return "AI" }
+        return pieces.map { "\($0.provider.shortSymbol) \($0.text)" }
             .joined(separator: " · ")
     }
 }

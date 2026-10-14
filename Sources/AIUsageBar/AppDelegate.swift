@@ -58,6 +58,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let textAttrs: [NSAttributedString.Key: Any] = [
             .font: font, .foregroundColor: NSColor.labelColor,
         ]
+        guard !pieces.isEmpty else {
+            return NSAttributedString(string: snapshots.isEmpty ? "AI …" : "AI", attributes: textAttrs)
+        }
         let result = NSMutableAttributedString()
         for (index, piece) in pieces.enumerated() {
             if index > 0 {
@@ -95,6 +98,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         refresh.target = self
         refresh.isEnabled = !store.isRefreshing
         menu.addItem(refresh)
+
+        let visibilityItem = NSMenuItem(title: "Show in Menu Bar", action: nil, keyEquivalent: "")
+        let visibilityMenu = NSMenu(title: "Show in Menu Bar")
+        visibilityMenu.autoenablesItems = false
+        for provider in ProviderKind.allCases {
+            let item = NSMenuItem(
+                title: provider.rawValue, action: #selector(toggleProviderVisibility(_:)), keyEquivalent: "")
+            item.target = self
+            item.representedObject = provider
+            item.state = Settings.isShownInMenuBar(provider) ? .on : .off
+            visibilityMenu.addItem(item)
+        }
+        visibilityItem.submenu = visibilityMenu
+        menu.addItem(visibilityItem)
 
         if LoginItem.isAvailable {
             let login = NSMenuItem(
@@ -242,6 +259,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let current = Settings.titleMetric(for: selection.provider)
         let next: TitleMetric = (current == selection.metric) ? .worst : selection.metric
         Settings.setTitleMetric(next, for: selection.provider)
+        render()
+    }
+
+    @objc private func toggleProviderVisibility(_ sender: NSMenuItem) {
+        guard let provider = sender.representedObject as? ProviderKind else { return }
+        Settings.setShownInMenuBar(!Settings.isShownInMenuBar(provider), for: provider)
         render()
     }
 

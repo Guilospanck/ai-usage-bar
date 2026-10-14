@@ -35,6 +35,17 @@ enum TitleMetric: Equatable {
 }
 
 enum Settings {
+    /// Visibility only affects the compact title, not fetching or the dropdown.
+    static func isShownInMenuBar(_ provider: ProviderKind) -> Bool {
+        let key = "menuBarVisible.\(provider.rawValue)"
+        guard UserDefaults.standard.object(forKey: key) != nil else { return true }
+        return UserDefaults.standard.bool(forKey: key)
+    }
+
+    static func setShownInMenuBar(_ shown: Bool, for provider: ProviderKind) {
+        UserDefaults.standard.set(shown, forKey: "menuBarVisible.\(provider.rawValue)")
+    }
+
     /// Each provider remembers its own menu-bar metric independently, so pinning
     /// a Claude window doesn't disturb OpenAI's selection and vice versa.
     static func titleMetric(for provider: ProviderKind) -> TitleMetric {
