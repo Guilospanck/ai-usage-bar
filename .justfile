@@ -140,29 +140,27 @@ setup-tap-key:
     #!/usr/bin/env bash
     set -euo pipefail
     command -v gh >/dev/null || { echo "✗ install gh first: brew install gh" >&2; exit 1; }
+    title="ai-usage-bar release CI"
+    tap=Guilospanck/homebrew-tap
+    # Rerunnable: the new key replaces any earlier one with this title, and the old one goes only after the new one works.
+    old_ids="$(gh repo deploy-key list -R "$tap" --json id,title --jq ".[] | select(.title == \"$title\") | .id")"
     umask 077
     tmp="$(mktemp -d)"
     trap 'rm -rf -- "$tmp"' EXIT
-    ssh-keygen -t ed25519 -N "" -C "ai-usage-bar release CI" -f "$tmp/key" >/dev/null
-    gh repo deploy-key add "$tmp/key.pub" \
-        -R Guilospanck/homebrew-tap \
-        --title "ai-usage-bar release CI" \
-        --allow-write
-    if ! gh secret set HOMEBREW_TAP_DEPLOY_KEY \
-        -R Guilospanck/ai-usage-bar < "$tmp/key"; then
-        echo "✗ Failed to store the private key; removing the deploy key from homebrew-tap." >&2
-        public_key="$(awk '{print $1 " " $2}' "$tmp/key.pub")"
-        key_id="$(gh repo deploy-key list \
-            -R Guilospanck/homebrew-tap \
-            --json id,key \
-            --jq ".[] | select(.key == \"$public_key\") | .id" || true)"
-        if [[ -n "$key_id" ]] && gh repo deploy-key delete "$key_id" -R Guilospanck/homebrew-tap; then
-            echo "✓ Removed the deploy key." >&2
+    ssh-keygen -t ed25519 -N "" -C "$title" -f "$tmp/key" >/dev/null
+    gh repo deploy-key add "$tmp/key.pub" -R "$tap" --title "$title" --allow-write
+    public_key="$(awk '{print $1 " " $2}' "$tmp/key.pub")"
+    if ! gh secret set HOMEBREW_TAP_DEPLOY_KEY -R Guilospanck/ai-usage-bar < "$tmp/key"; then
+        echo "✗ Failed to store the private key; removing the new deploy key (the old one stays)." >&2
+        key_id="$(gh repo deploy-key list -R "$tap" --json id,key --jq ".[] | select(.key == \"$public_key\") | .id" || true)"
+        if [[ -n "$key_id" ]] && gh repo deploy-key delete "$key_id" -R "$tap"; then
+            echo "✓ Removed the new deploy key." >&2
         else
-            echo "⚠ Could not remove the deploy key automatically; remove it from homebrew-tap manually." >&2
+            echo "⚠ Could not remove the new deploy key automatically; remove it from homebrew-tap manually." >&2
         fi
         exit 1
     fi
+    for id in $old_ids; do gh repo deploy-key delete "$id" -R "$tap" && echo "✓ Removed the earlier deploy key $id."; done
     echo "✓ Deploy key added to homebrew-tap (write) and stored as HOMEBREW_TAP_DEPLOY_KEY."
 
 # --- Runtime control -----------------------------------------------------
