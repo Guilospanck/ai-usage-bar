@@ -1,4 +1,6 @@
-# AI Usage Bar
+<p align="center"><img src="assets/icon.png" alt="AI Usage Bar icon" width="128" height="128"></p>
+
+<h1 align="center">AI Usage Bar</h1>
 
 A native macOS menu-bar app that shows your **current subscription usage** for
 **Claude**, **OpenAI/ChatGPT**, and **Antigravity** side by side — usage windows
